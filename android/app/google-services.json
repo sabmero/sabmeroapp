@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "84234912141",
+    "project_id": "sabmero",
+    "storage_bucket": "sabmero.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84234912141:android:bf23a2fd56e6bfe774bdc4",
+        "android_client_info": {
+          "package_name": "com.example.sabmeroapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAoTsQzDZwq0GQC8EUbdBdcfs-F5PxiWM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
