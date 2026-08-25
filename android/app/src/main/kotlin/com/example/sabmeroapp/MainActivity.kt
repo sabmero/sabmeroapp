@@ -1,4 +1,4 @@
-package com.example.sabmeroapp
+package com.ecommerce.sabmeroapp
 
 import io.flutter.embedding.android.FlutterActivity
 

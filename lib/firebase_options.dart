@@ -63,6 +63,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '84234912141',
     projectId: 'sabmero',
     storageBucket: 'sabmero.firebasestorage.app',
-    iosBundleId: 'com.example.sabmeroapp',
+    iosBundleId: 'com.ecommerce.sabmeroapp',
   );
 }
