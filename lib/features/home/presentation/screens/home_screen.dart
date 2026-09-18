@@ -170,7 +170,7 @@ class HomeScreen extends ConsumerWidget {
 
             // Featured products grid
             featuredState.when(
-              data: (products) => SliverPadding(
+              data: (state) => SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                 sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -180,7 +180,7 @@ class HomeScreen extends ConsumerWidget {
                     childAspectRatio: 0.58,
                   ),
                   delegate: SliverChildBuilderDelegate((context, index) {
-                    final product = products[index];
+                    final product = state.items[index];
                     return ProductCard(
                       product: product,
                       onTap: () => context.push(
@@ -190,7 +190,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                     );
-                  }, childCount: products.take(6).length),
+                  }, childCount: state.items.take(6).length),
                 ),
               ),
               loading: () =>

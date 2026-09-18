@@ -37,17 +37,53 @@ class CategoriesNotifier extends AsyncNotifier<List<CategoryEntity>> {
   }
 }
 
-final productsNotifierProvider =
-    AsyncNotifierProvider.family<
-      ProductsNotifier,
-      List<ProductEntity>,
-      String?
-    >(ProductsNotifier.new);
+/// Immutable view of a paginated product list.
+///
+/// The list screen shows [items] and calls [ProductsNotifier.loadMore] as the
+/// user scrolls, so every page of a category is loaded rather than only the
+/// first. [hasMore] stays true until a page comes back short, and
+/// [isLoadingMore] drives the footer spinner without replacing the visible grid.
+class ProductsState {
+  const ProductsState({
+    this.items = const [],
+    this.page = 1,
+    this.hasMore = true,
+    this.isLoadingMore = false,
+  });
 
-class ProductsNotifier extends AsyncNotifier<List<ProductEntity>> {
+  final List<ProductEntity> items;
+  final int page;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  ProductsState copyWith({
+    List<ProductEntity>? items,
+    int? page,
+    bool? hasMore,
+    bool? isLoadingMore,
+  }) {
+    return ProductsState(
+      items: items ?? this.items,
+      page: page ?? this.page,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
+}
+
+final productsNotifierProvider =
+    AsyncNotifierProvider.family<ProductsNotifier, ProductsState, String?>(
+      ProductsNotifier.new,
+    );
+
+class ProductsNotifier extends AsyncNotifier<ProductsState> {
   ProductsNotifier(this.categoryId);
 
+  static const int _pageSize = 20;
+
   final String? categoryId;
+
+  String? get _categoryId => categoryId;
 
   // Currently applied query/filters so search, filter and refresh compose.
   String? _query;
@@ -56,11 +92,72 @@ class ProductsNotifier extends AsyncNotifier<List<ProductEntity>> {
   String _sortBy = 'newest';
 
   @override
-  Future<List<ProductEntity>> build() async {
+  Future<ProductsState> build() async {
+    return _fetchPage(1);
+  }
+
+  /// Loads a single page from the backend and returns a fresh state.
+  Future<ProductsState> _fetchPage(int page) async {
+    final effectiveCategoryId = _categoryId ?? _matchedCategoryId();
     final products = await GetProductsUseCase(ref.read(shopRepositoryProvider))(
-      GetProductsParams(categoryId: categoryId),
+      GetProductsParams(
+        categoryId: effectiveCategoryId,
+        searchQuery: _query,
+        page: page,
+        pageSize: _pageSize,
+      ),
     );
-    return _applyClientFilters(products);
+    final sorted = _applyClientFilters(products);
+    return ProductsState(
+      items: sorted,
+      page: page,
+      hasMore: products.length >= _pageSize,
+      isLoadingMore: false,
+    );
+  }
+
+  /// Fetches the next page and appends it to the visible list. Safe to call
+  /// repeatedly from a scroll listener: it no-ops while a page is in flight,
+  /// when there is nothing more to load, or before the first page is ready.
+  Future<void> loadMore() async {
+    final current = state.value;
+    if (current == null || !current.hasMore || current.isLoadingMore) return;
+
+    state = AsyncValue.data(current.copyWith(isLoadingMore: true));
+
+    try {
+      final nextPage = current.page + 1;
+      final effectiveCategoryId = _categoryId ?? _matchedCategoryId();
+      final products = await GetProductsUseCase(
+        ref.read(shopRepositoryProvider),
+      )(
+        GetProductsParams(
+          categoryId: effectiveCategoryId,
+          searchQuery: _query,
+          page: nextPage,
+          pageSize: _pageSize,
+        ),
+      );
+
+      final combined = _applyClientFilters([...current.items, ...products]);
+      state = AsyncValue.data(
+        current.copyWith(
+          items: combined,
+          page: nextPage,
+          hasMore: products.length >= _pageSize,
+          isLoadingMore: false,
+        ),
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Products loadMore failed',
+        tag: 'ProductsNotifier',
+        error: e,
+        stackTrace: st,
+      );
+      // Keep what we have; just stop the footer spinner so the user can retry.
+      state = AsyncValue.data(current.copyWith(isLoadingMore: false));
+    }
   }
 
   /// Applies the current price-range filter and sort to a product list.
@@ -94,26 +191,10 @@ class ProductsNotifier extends AsyncNotifier<List<ProductEntity>> {
     return list;
   }
 
+  /// Re-fetches from page 1 with the current query/filters applied.
   Future<void> _reload() async {
     state = const AsyncValue.loading();
-    try {
-      // When the user searches, also try to match a category by name so that
-      // typing e.g. "Grocery" surfaces products in that category even if the
-      // product name/description doesn't contain the term.
-      final effectiveCategoryId = categoryId ?? _matchedCategoryId();
-      final result = await GetProductsUseCase(ref.read(shopRepositoryProvider))(
-        GetProductsParams(categoryId: effectiveCategoryId, searchQuery: _query),
-      );
-      state = AsyncValue.data(_applyClientFilters(result));
-    } catch (e, st) {
-      AppLogger.error(
-        'Products reload failed',
-        tag: 'ProductsNotifier',
-        error: e,
-        stackTrace: st,
-      );
-      state = AsyncValue.error(e, st);
-    }
+    state = await AsyncValue.guard(() => _fetchPage(1));
   }
 
   /// If the search text matches a category name, return that category's id so

@@ -22,7 +22,6 @@ void main() async {
 
   try {
     await Firebase.initializeApp();
-    // Background/terminated push handler — must be registered before runApp.
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     await FcmService.init();
   } catch (e, st) {
@@ -45,12 +44,8 @@ class SabmeroApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
 
-    // Registers the FCM device token with the backend whenever the user is
-    // logged in, and re-registers on token refresh.
     ref.watch(fcmRegistrationProvider);
 
-    // Lets notification taps (foreground/background/terminated) deep-link into
-    // the app once the router is available.
     FcmService.attachNavigator(router.go);
 
     return MaterialApp.router(

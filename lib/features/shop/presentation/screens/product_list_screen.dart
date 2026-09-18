@@ -24,6 +24,7 @@ class ProductListScreen extends ConsumerStatefulWidget {
 
 class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
   Timer? _debounce;
   String _currentQuery = '';
 
@@ -39,10 +40,27 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       widget.categoryId.isNotEmpty ? widget.categoryId : null;
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  // Fetch the next page a little before the user hits the bottom so the grid
+  // keeps filling until every product in the category is shown.
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 400) {
+      ref.read(productsNotifierProvider(_categoryKey).notifier).loadMore();
+    }
   }
 
   void _onSearchChanged(String query) {
@@ -131,7 +149,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           const SizedBox(height: 8),
           Expanded(
             child: productsState.when(
-              data: (products) => products.isEmpty
+              data: (state) => state.items.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -145,10 +163,14 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                             style: Theme.of(context).textTheme.bodyMedium,
                             textAlign: TextAlign.center,
                           ),
-                        ],
+                      ],
                       ),
                     )
-                  : ProductGrid(products: products),
+                  : ProductGrid(
+                      products: state.items,
+                      controller: _scrollController,
+                      isLoadingMore: state.isLoadingMore,
+                    ),
               loading: () => const ProductGridSkeleton(),
               error: (e, _) => AppErrorWidget(
                 message: e.toString(),

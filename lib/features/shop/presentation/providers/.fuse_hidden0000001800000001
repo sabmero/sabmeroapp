@@ -1,0 +1,249 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/usecases/usecase.dart';
+import '../../../../core/utils/app_logger.dart';
+import '../../data/repositories/shop_repository_impl.dart';
+import '../../domain/entities/category_entity.dart';
+import '../../domain/usecases/get_categories_usecase.dart';
+
+final categoriesNotifierProvider =
+    AsyncNotifierProvider<CategoriesNotifier, List<CategoryEntity>>(
+      CategoriesNotifier.new,
+    );
+
+class CategoriesNotifier extends AsyncNotifier<List<CategoryEntity>> {
+  @override
+  Future<List<CategoryEntity>> build() async {
+    return GetCategoriesUseCase(ref.watch(shopRepositoryProvider))(
+      const NoParams(),
+    );
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    try {
+      final result = await GetCategoriesUseCase(
+        ref.read(shopRepositoryProvider),
+      )(const NoParams());
+      state = AsyncValue.data(result);
+    } catch (e, st) {
+      AppLogger.error(
+        'Categories refresh failed',
+        tag: 'CategoriesNotifier',
+        error: e,
+        stackTrace: st,
+      );
+      state = AsyncValue.error(e, st);
+    }
+  }
+}
+
+/// Immutable view of a paginated product list.
+///
+/// The list screen shows [items] and calls [ProductsNotifier.loadMore] as the
+/// user scrolls, so every page of a category is loaded rather than only the
+/// first. [hasMore] stays true until a page comes back short, and
+/// [isLoadingMore] drives the footer spinner without replacing the visible grid.
+class ProductsState {
+  const ProductsState({
+    this.items = const [],
+    this.page = 1,
+    this.hasMore = true,
+    this.isLoadingMore = false,
+  });
+
+  final List<ProductEntity> items;
+  final int page;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  ProductsState copyWith({
+    List<ProductEntity>? items,
+    int? page,
+    bool? hasMore,
+    bool? isLoadingMore,
+  }) {
+    return ProductsState(
+      items: items ?? this.items,
+      page: page ?? this.page,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
+}
+
+final productsNotifierProvider =
+    AsyncNotifierProvider.family<ProductsNotifier, ProductsState, String?>(
+      ProductsNotifier.new,
+    );
+
+class ProductsNotifier extends FamilyAsyncNotifier<ProductsState, String?> {
+  static const int _pageSize = 20;
+
+  String? get _categoryId => arg;
+
+  // Currently applied query/filters so search, filter and refresh compose.
+  String? _query;
+  double? _minPrice;
+  double? _maxPrice;
+  String _sortBy = 'newest';
+
+  @override
+  Future<ProductsState> build(String? arg) async {
+    return _fetchPage(1);
+  }
+
+  /// Loads a single page from the backend and returns a fresh state.
+  Future<ProductsState> _fetchPage(int page) async {
+    final effectiveCategoryId = _categoryId ?? _matchedCategoryId();
+    final products = await GetProductsUseCase(ref.read(shopRepositoryProvider))(
+      GetProductsParams(
+        categoryId: effectiveCategoryId,
+        searchQuery: _query,
+        page: page,
+        pageSize: _pageSize,
+      ),
+    );
+    final sorted = _applyClientFilters(products);
+    return ProductsState(
+      items: sorted,
+      page: page,
+      hasMore: products.length >= _pageSize,
+      isLoadingMore: false,
+    );
+  }
+
+  /// Fetches the next page and appends it to the visible list. Safe to call
+  /// repeatedly from a scroll listener: it no-ops while a page is in flight,
+  /// when there is nothing more to load, or before the first page is ready.
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null || !current.hasMore || current.isLoadingMore) return;
+
+    state = AsyncValue.data(current.copyWith(isLoadingMore: true));
+
+    try {
+      final nextPage = current.page + 1;
+      final effectiveCategoryId = _categoryId ?? _matchedCategoryId();
+      final products = await GetProductsUseCase(
+        ref.read(shopRepositoryProvider),
+      )(
+        GetProductsParams(
+          categoryId: effectiveCategoryId,
+          searchQuery: _query,
+          page: nextPage,
+          pageSize: _pageSize,
+        ),
+      );
+
+      final combined = _applyClientFilters([...current.items, ...products]);
+      state = AsyncValue.data(
+        current.copyWith(
+          items: combined,
+          page: nextPage,
+          hasMore: products.length >= _pageSize,
+          isLoadingMore: false,
+        ),
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Products loadMore failed',
+        tag: 'ProductsNotifier',
+        error: e,
+        stackTrace: st,
+      );
+      // Keep what we have; just stop the footer spinner so the user can retry.
+      state = AsyncValue.data(current.copyWith(isLoadingMore: false));
+    }
+  }
+
+  /// Applies the current price-range filter and sort to a product list.
+  /// Done client-side for the mock layer; move to query params when the
+  /// real API supports filtering/sorting.
+  List<ProductEntity> _applyClientFilters(List<ProductEntity> products) {
+    var list = products.where((p) {
+      final min = _minPrice ?? 0;
+      final max = _maxPrice ?? double.infinity;
+      return p.basePrice >= min && p.basePrice <= max;
+    }).toList();
+
+    switch (_sortBy) {
+      case 'price_asc':
+        list.sort((a, b) => a.basePrice.compareTo(b.basePrice));
+        break;
+      case 'price_desc':
+        list.sort((a, b) => b.basePrice.compareTo(a.basePrice));
+        break;
+      case 'rating':
+        list.sort((a, b) => b.rating.compareTo(a.rating));
+        break;
+      case 'popular':
+        list.sort((a, b) => b.reviewCount.compareTo(a.reviewCount));
+        break;
+      case 'newest':
+      default:
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
+    return list;
+  }
+
+  /// Re-fetches from page 1 with the current query/filters applied.
+  Future<void> _reload() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _fetchPage(1));
+  }
+
+  /// If the search text matches a category name, return that category's id so
+  /// the backend filters by it. Returns null when there's no query or match.
+  String? _matchedCategoryId() {
+    final q = _query?.trim().toLowerCase();
+    if (q == null || q.isEmpty) return null;
+    final categories = ref.read(categoriesNotifierProvider).asData?.value;
+    if (categories == null) return null;
+    for (final c in categories) {
+      final name = c.name.toLowerCase();
+      if (name == q || name.contains(q) || q.contains(name)) {
+        // When the term matches a category, search by category instead of
+        // the free-text query (which wouldn't match product names).
+        _query = null;
+        return c.id;
+      }
+    }
+    return null;
+  }
+
+  Future<void> search(String query) async {
+    _query = query;
+    await _reload();
+  }
+
+  Future<void> clearSearch() async {
+    _query = null;
+    await _reload();
+  }
+
+  /// Apply price range + sort selected in the filter sheet.
+  Future<void> applyFilters({
+    double? minPrice,
+    double? maxPrice,
+    String? sortBy,
+  }) async {
+    _minPrice = minPrice;
+    _maxPrice = maxPrice;
+    if (sortBy != null) _sortBy = sortBy;
+    await _reload();
+  }
+
+  /// Re-fetch from scratch, surfacing the loading state so the UI can show
+  /// skeletons during pull-to-refresh. Keeps active search/filters applied.
+  Future<void> refresh() async {
+    await _reload();
+  }
+}
+
+final productDetailProvider = FutureProvider.family<ProductEntity, String>((
+  ref,
+  productId,
+) async {
+  return GetProductDetailUseCase(ref.watch(shopRepositoryProvider))(productId);
+});

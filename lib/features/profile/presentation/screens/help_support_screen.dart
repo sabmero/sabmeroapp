@@ -12,7 +12,7 @@ class HelpSupportScreen extends ConsumerWidget {
 
   // Update these with your real support channels.
   static const String _supportEmail = 'support@sabmero.com';
-  static const String _supportPhone = '+9779800000000';
+  static const String _supportPhone = '+977 9747737597';
 
   Future<void> _launch(Uri uri, BuildContext context) async {
     try {

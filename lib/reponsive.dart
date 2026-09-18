@@ -1,12 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Central place for responsive breakpoints and sizing so every screen
-/// adapts the same way on phones, tablets, and desktop/web.
-///
-/// Usage:
-///   if (Responsive.isTablet(context)) ...
-///   ConstrainedBox(constraints: BoxConstraints(maxWidth: Responsive.contentMaxWidth(context)))
-///   GridView(crossAxisCount: Responsive.gridColumns(context))
 class Responsive {
   Responsive._();
 
@@ -58,9 +51,6 @@ class Responsive {
   }
 }
 
-/// Wraps [child] in a centered, width-constrained box on large screens and
-/// leaves it full-width on phones. Drop it around any screen body to make it
-/// responsive without restructuring the layout.
 class ResponsiveBody extends StatelessWidget {
   const ResponsiveBody({super.key, required this.child, this.maxWidth});
 
