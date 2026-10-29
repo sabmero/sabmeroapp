@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sabmeroapp/core/constants/asset_constants.dart';
+import '../../../../core/router/providers/pending_route_provider.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/validators.dart';
@@ -58,7 +59,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final isLoading = _isSubmitting;
 
-    return Scaffold(
+    return PopScope(
+      // Leaving the login screen without signing in (Back or the X button)
+      // cancels whatever the guest was trying to open.
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) ref.read(pendingRouteProvider).clear();
+      },
+      child: Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -67,6 +74,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (context.canPop())
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      tooltip: 'Close',
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                      icon: const Icon(Icons.close),
+                      onPressed: () => context.pop(),
+                    ),
+                  ),
                 Center(
                   child: Image.asset(
                     AssetConstants.logo,
@@ -160,6 +178,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

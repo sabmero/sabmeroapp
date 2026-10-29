@@ -101,7 +101,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         .read(authLocalDataSourceProvider)
         .hasSeenOnboarding();
     if (!mounted) return;
-    context.go(seenOnboarding ? RouteNames.login : RouteNames.onboarding);
+    // Guests browse first; login is only asked for at order / booking time.
+    context.go(seenOnboarding ? RouteNames.home : RouteNames.onboarding);
   }
 
   @override

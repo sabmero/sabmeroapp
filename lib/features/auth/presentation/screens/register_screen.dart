@@ -46,9 +46,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             phone: Validators.normalizePhone(_phoneController.text.trim()),
             address: _addressController.text.trim(),
             password: _passwordController.text.trim(),
-            email: _emailController.text.trim().isNotEmpty
-                ? _emailController.text.trim()
-                : null,
+            email: _emailController.text.trim(),
           );
       // Success: auth state holds the new user, router redirects home.
     } catch (e) {
@@ -113,14 +111,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               const SizedBox(height: 16),
               AppTextField(
                 controller: _emailController,
-                label: 'Email (optional)',
+                label: 'Email',
                 hint: 'you@example.com',
                 prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  return Validators.email(v);
-                },
+                validator: (v) => Validators.email(v?.trim()),
               ),
               const SizedBox(height: 16),
               AppTextField(

@@ -49,7 +49,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finish() async {
     await ref.read(authLocalDataSourceProvider).markOnboardingSeen();
-    if (mounted) context.go(RouteNames.login);
+    if (mounted) context.go(RouteNames.home);
   }
 
   void _next() {
