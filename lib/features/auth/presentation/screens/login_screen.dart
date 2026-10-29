@@ -41,7 +41,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             phone: Validators.normalizePhone(_phoneController.text.trim()),
             password: _passwordController.text.trim(),
           );
-      // On success the auth state holds a user and the router redirects home.
+      if (!mounted) return;
+      // Signed in: go back to where the user was heading (or Home).
+      continueAfterLogin(context, ref);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

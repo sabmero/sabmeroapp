@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pinput/pinput.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/router/providers/pending_route_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../providers/auth_provider.dart';
@@ -49,7 +50,8 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     if (!mounted) return;
     setState(() => _isSubmitting = false);
     if (success) {
-      // Auth state now holds the user; the router redirects to home.
+      // Signed in: continue to where the user was heading (or Home).
+      continueAfterLogin(context, ref);
       return;
     }
     final error = notifier.consumeLastError();
