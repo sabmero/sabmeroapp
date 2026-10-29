@@ -196,10 +196,13 @@ class FcmService {
   static String _routeFor(RemoteMessage message) {
     final data = message.data;
     final type = (data['type'] ?? '').toString().toLowerCase();
-    final refId = (data['referenceId'] ?? data['id'] ?? '').toString();
+    final refId =
+        (data['referenceId'] ?? data['id'] ?? data['orderId'] ?? '').toString();
 
     switch (type) {
       case 'order':
+      case 'order_new': // vendor/admin: a new order arrived
+      case 'order_status': // vendor/admin: status of an order changed
         return refId.isNotEmpty
             ? RouteNames.orderDetail.replaceFirst(':id', refId)
             : RouteNames.orderList;
