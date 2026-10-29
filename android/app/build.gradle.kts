@@ -45,7 +45,7 @@ android {
         versionName = flutter.versionName
     }
 
-        signingConfigs {
+    signingConfigs {
         if (keystorePropertiesFile.exists()) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
@@ -64,7 +64,6 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
-    }
     }
 }
 
