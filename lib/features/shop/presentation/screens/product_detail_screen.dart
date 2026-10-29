@@ -699,95 +699,185 @@ class _AddToCartBar extends ConsumerWidget {
     // the synthetic default) must also be in stock.
     final variant = selectedVariant ?? product.defaultVariant;
     final canAdd = product.stock > 0 && variant != null && variant.isInStock;
+    final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.outline),
-              borderRadius: BorderRadius.circular(10),
+    // Keep the bar readable on every phone: cap very large system font sizes
+    // so button labels never wrap onto several lines.
+    final mq = MediaQuery.of(context);
+    final cappedScaler = mq.textScaler.clamp(maxScaleFactor: 1.15);
+
+    final buttonShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    );
+    const buttonPadding = EdgeInsets.symmetric(horizontal: 8);
+    const buttonSize = Size(0, 50);
+    const labelStyle = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
+
+    return MediaQuery(
+      data: mq.copyWith(textScaler: cappedScaler),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          12 + MediaQuery.of(context).padding.bottom,
+        ),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(20),
+              blurRadius: 12,
+              offset: const Offset(0, -4),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Row 1: quantity stepper
+            Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.remove, size: 18),
-                  onPressed: quantity > 1
-                      ? () => onQuantityChanged(quantity - 1)
-                      : null,
-                ),
                 Text(
-                  '$quantity',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  'Quantity',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add, size: 18),
-                  onPressed: quantity < 99
-                      ? () => onQuantityChanged(quantity + 1)
-                      : null,
+                const Spacer(),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: scheme.outline),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.remove, size: 18),
+                        onPressed: quantity > 1
+                            ? () => onQuantityChanged(quantity - 1)
+                            : null,
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 28),
+                        child: Text(
+                          '$quantity',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.add, size: 18),
+                        onPressed: quantity < 99
+                            ? () => onQuantityChanged(quantity + 1)
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: canAdd
-                  ? () {
-                      cartNotifier.addItem(
-                        product: product,
-                        variant: variant,
-                        quantity: quantity,
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${product.name} added to cart'),
-                          action: SnackBarAction(
-                            label: 'View Cart',
-                            onPressed: () => context.push(RouteNames.cart),
-                          ),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
-                  : null,
-              icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-              label: Text(canAdd ? 'Add to Cart' : 'Out of Stock'),
+            const SizedBox(height: 10),
+            // Row 2: two equal-width buttons, label always on one line
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: buttonSize,
+                      padding: buttonPadding,
+                      shape: buttonShape,
+                    ),
+                    onPressed: canAdd
+                        ? () {
+                            cartNotifier.addItem(
+                              product: product,
+                              variant: variant,
+                              quantity: quantity,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('${product.name} added to cart'),
+                                action: SnackBarAction(
+                                  label: 'View Cart',
+                                  onPressed: () =>
+                                      context.push(RouteNames.cart),
+                                ),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        : null,
+                    child: _ButtonLabel(
+                      icon: Icons.shopping_cart_outlined,
+                      text: canAdd ? 'Add to Cart' : 'Out of Stock',
+                      style: labelStyle,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: buttonSize,
+                      padding: buttonPadding,
+                      shape: buttonShape,
+                    ),
+                    onPressed: canAdd
+                        ? () {
+                            // Direct order: put the item in the cart and jump
+                            // straight to checkout. Guests are asked to log in
+                            // here (the router redirects), then continue.
+                            cartNotifier.addItem(
+                              product: product,
+                              variant: variant,
+                              quantity: quantity,
+                            );
+                            context.push(RouteNames.checkout);
+                          }
+                        : null,
+                    child: const _ButtonLabel(
+                      icon: Icons.flash_on_rounded,
+                      text: 'Order Now',
+                      style: labelStyle,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: canAdd
-                  ? () {
-                      // Direct order: put the item in the cart and jump
-                      // straight to checkout, skipping the cart screen.
-                      cartNotifier.addItem(
-                        product: product,
-                        variant: variant,
-                        quantity: quantity,
-                      );
-                      context.push(RouteNames.checkout);
-                    }
-                  : null,
-              icon: const Icon(Icons.flash_on_rounded, size: 18),
-              label: const Text('Order Now'),
-            ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Icon + single-line label that shrinks to fit instead of wrapping.
+class _ButtonLabel extends StatelessWidget {
+  const _ButtonLabel({
+    required this.icon,
+    required this.text,
+    required this.style,
+  });
+
+  final IconData icon;
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 6),
+          Text(text, maxLines: 1, softWrap: false, style: style),
         ],
       ),
     );
