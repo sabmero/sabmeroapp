@@ -43,12 +43,13 @@ import '../../features/profile/presentation/screens/terms_of_service_screen.dart
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/payment/presentation/screens/qr_scanner_screen.dart';
 import '../../features/payment/presentation/screens/payment_method_screen.dart';
+import 'providers/pending_route_provider.dart';
 import 'providers/pending_task_count_provider.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final notifier = RouterNotifier(ref);
 
-  return GoRouter(
+  final router = GoRouter(
     refreshListenable: notifier,
     initialLocation: RouteNames.splash,
     redirect: notifier.redirect,
@@ -268,6 +269,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  notifier.router = router;
+  return router;
 });
 
 class RouterNotifier extends ChangeNotifier {
@@ -276,6 +279,38 @@ class RouterNotifier extends ChangeNotifier {
   }
 
   final Ref _ref;
+
+  /// Set right after the GoRouter is created; used to continue to the page a
+  /// guest was heading to once they have logged in.
+  GoRouter? router;
+
+  /// Screens that need an account. Everything else (browsing the shop, product
+  /// pages, the cart, repair categories, help/policy pages) is open to guests.
+  static bool _requiresLogin(String location) {
+    const exact = <String>{
+      RouteNames.checkout,
+      RouteNames.orderList,
+      RouteNames.notifications,
+      RouteNames.profile,
+      RouteNames.editProfile,
+      RouteNames.addressList,
+      RouteNames.repairBooking,
+      RouteNames.myRepairs,
+      RouteNames.paymentMethod,
+      RouteNames.qrScanner,
+    };
+    if (exact.contains(location)) return true;
+    const prefixes = <String>['/orders/', '/vendor/', '/technician/', '/rider/'];
+    if (prefixes.any(location.startsWith)) return true;
+    return location.startsWith('/repair/') && location.endsWith('/tracking');
+  }
+
+  /// Bottom-tab roots: after login we `go` straight to them.
+  static bool _isTabRoot(String location) =>
+      location == RouteNames.home ||
+      location == RouteNames.orderList ||
+      location == RouteNames.notifications ||
+      location == RouteNames.profile;
 
   String? redirect(BuildContext context, GoRouterState state) {
     final authState = _ref.read(authNotifierProvider);
@@ -303,17 +338,31 @@ class RouterNotifier extends ChangeNotifier {
     final user = authState.asData?.value;
 
     // Auth has settled. If a logged-in user lands on splash, send them home.
-    // The unauthenticated case (login vs onboarding) is decided by SplashScreen,
-    // which needs the async onboarding flag, so we don't force it here.
+    // The unauthenticated case (onboarding vs home) is decided by
+    // SplashScreen, which needs the async onboarding flag, so we don't force
+    // it here.
     if (isAtSplash) {
       return user != null ? RouteNames.home : null;
     }
 
-    if (user == null && !isAtAuth) {
+    // Guests can browse freely. Only account screens (checkout, booking,
+    // orders, profile ...) ask for a login, and remember where to come back to.
+    if (user == null && !isAtAuth && _requiresLogin(location)) {
+      _ref
+          .read(pendingRouteProvider)
+          .set(state.uri.toString(), extra: state.extra);
       return RouteNames.login;
     }
 
     if (user != null && isAtAuth) {
+      final pending = _ref.read(pendingRouteProvider).take();
+      if (pending == null) return RouteNames.home;
+      if (_isTabRoot(pending.location)) return pending.location;
+      // Land on Home first so Back works, then open the screen the guest was
+      // heading to (checkout, repair booking ...).
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        router?.push(pending.location, extra: pending.extra);
+      });
       return RouteNames.home;
     }
 
@@ -466,6 +515,20 @@ class _MainShellState extends ConsumerState<MainShell> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: shell.currentIndex,
           onDestinationSelected: (index) {
+            final authState = ref.read(authNotifierProvider);
+            final isGuest =
+                !authState.isLoading && authState.asData?.value == null;
+            if (isGuest && index != 0) {
+              const tabPaths = <String>[
+                RouteNames.home,
+                RouteNames.orderList,
+                RouteNames.notifications,
+                RouteNames.profile,
+              ];
+              ref.read(pendingRouteProvider).set(tabPaths[index]);
+              context.push(RouteNames.login);
+              return;
+            }
             shell.goBranch(index, initialLocation: index == shell.currentIndex);
           },
           destinations: [
