@@ -12,6 +12,8 @@ class ApiConstants {
   static const String resetPassword = '/Auth/reset-password';
   static const String updateProfile = '/Auth/profile';
   static const String fcmToken = '/Auth/fcm-token';
+  // GET / PUT { pushEnabled, promoAlertsEnabled } — Settings screen toggles.
+  static const String notificationSettings = '/Auth/notification-settings';
 
   // KYC (current user)
   static const String kycSubmit = '/Auth/kyc';
