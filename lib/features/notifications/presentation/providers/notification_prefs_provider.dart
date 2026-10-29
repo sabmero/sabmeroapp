@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sabmeroapp/core/constants/api_constants.dart';
 import 'package:sabmeroapp/core/constants/app_constants.dart';
+import 'package:sabmeroapp/core/network/api_client.dart';
 import 'package:sabmeroapp/core/utils/app_logger.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,9 +27,13 @@ class NotificationPrefs {
 }
 
 class NotificationPrefsNotifier extends Notifier<NotificationPrefs> {
+  // Completes once the saved switches have been read from SharedPreferences,
+  // so a server sync never sends the temporary defaults.
+  late Future<void> _ready;
+
   @override
   NotificationPrefs build() {
-    _load();
+    _ready = _load();
     return const NotificationPrefs(
       pushNotifications: true,
       promotionalAlerts: false,
@@ -56,11 +62,45 @@ class NotificationPrefsNotifier extends Notifier<NotificationPrefs> {
   Future<void> setPushNotifications(bool value) async {
     state = state.copyWith(pushNotifications: value);
     await _save(AppConstants.pushNotificationsKey, value);
+    await _pushToServer();
   }
 
   Future<void> setPromotionalAlerts(bool value) async {
     state = state.copyWith(promotionalAlerts: value);
     await _save(AppConstants.promotionalAlertsKey, value);
+    await _pushToServer();
+  }
+
+  /// Sends the saved switches to the backend. Called after login (see
+  /// fcmRegistrationProvider) so the server always knows what this phone chose.
+  /// The server uses them to skip push / promo notifications.
+  Future<void> syncToServer() async {
+    await _ready;
+    await _pushToServer();
+  }
+
+  // PUT /api/Auth/notification-settings — best effort, never throws.
+  Future<void> _pushToServer() async {
+    try {
+      await ref.read(apiClientProvider).dio.put(
+        ApiConstants.notificationSettings,
+        data: {
+          'pushEnabled': state.pushNotifications,
+          'promoAlertsEnabled': state.promotionalAlerts,
+        },
+      );
+      AppLogger.info(
+        'Notification settings synced with backend',
+        tag: 'NotificationPrefsNotifier',
+      );
+    } catch (e, st) {
+      AppLogger.error(
+        'Failed to sync notification settings',
+        tag: 'NotificationPrefsNotifier',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> _save(String key, bool value) async {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/fcm_service.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import 'notification_prefs_provider.dart';
 
 final fcmTokenProvider = FutureProvider<String?>((ref) async {
   try {
@@ -32,6 +33,8 @@ final fcmRegistrationProvider = Provider<void>((ref) {
     final token = await FcmService.getToken();
     if (token == null) return;
     await ref.read(authNotifierProvider.notifier).registerFcmToken(token);
+    // Tell the backend which Settings switches this phone has on/off.
+    await ref.read(notificationPrefsProvider.notifier).syncToServer();
   }
 
   register();
