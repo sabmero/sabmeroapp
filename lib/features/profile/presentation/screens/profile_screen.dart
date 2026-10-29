@@ -380,7 +380,11 @@ class ProfileScreen extends ConsumerWidget {
       // Defer the logout until the dialog has fully popped, so the router's
       // auth redirect doesn't run while the navigator stack is still unwinding
       // (which caused the "popped the last page off the stack" assertion).
+      final router = GoRouter.of(context);
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Back to Home (open to guests) before clearing the session, so the
+        // user isn't bounced to a login screen with no way back.
+        router.go(RouteNames.home);
         ref.read(authNotifierProvider.notifier).logout();
       });
     }
