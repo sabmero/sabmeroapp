@@ -21,8 +21,12 @@ class CategoryChipList extends ConsumerWidget {
         final categories = withProducts.isNotEmpty ? withProducts : all;
         if (categories.isEmpty) return const SizedBox.shrink();
 
+        // Height follows the user's font size so large-text phones don't overflow.
+        final scaler = MediaQuery.textScalerOf(context);
+        final rowHeight = 60 + 6 + scaler.scale(11) * 1.5 * 2 + 8;
+
         return SizedBox(
-          height: 104,
+          height: rowHeight,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
