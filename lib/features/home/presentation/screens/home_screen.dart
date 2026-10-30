@@ -9,11 +9,20 @@ import '../../../cart/presentation/providers/cart_provider.dart';
 import '../../../shop/presentation/providers/categories_provider.dart';
 import '../../../shop/presentation/widgets/product_card.dart';
 import '../widgets/category_chip_list.dart';
+import '../widgets/home_search_bar.dart';
 import '../widgets/repair_section_card.dart';
+import '../widgets/section_header.dart';
 import '../widgets/shop_section_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
+
+  void _openAllProducts(BuildContext context) {
+    context.push(
+      RouteNames.productList,
+      extra: {'categoryId': '', 'categoryName': 'All Products'},
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,9 +37,17 @@ class HomeScreen extends ConsumerWidget {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'sabmero',
-              style: TextStyle(
+            Text.rich(
+              const TextSpan(
+                children: [
+                  TextSpan(text: 'Sab'),
+                  TextSpan(
+                    text: 'Mero',
+                    style: TextStyle(color: AppColors.accent),
+                  ),
+                ],
+              ),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
@@ -48,13 +65,6 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () => context.push(
-              RouteNames.productList,
-              extra: {'categoryId': '', 'categoryName': 'All Products'},
-            ),
-          ),
           Stack(
             children: [
               IconButton(
@@ -72,16 +82,16 @@ class HomeScreen extends ConsumerWidget {
                     width: 18,
                     height: 18,
                     decoration: const BoxDecoration(
-                      color: AppColors.errorColor,
+                      color: AppColors.accent,
                       shape: BoxShape.circle,
                     ),
                     child: Center(
                       child: Text(
                         cartCount > 9 ? '9+' : '$cartCount',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.onAccent,
                           fontSize: 10,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
@@ -100,75 +110,50 @@ class HomeScreen extends ConsumerWidget {
         },
         child: CustomScrollView(
           slivers: [
+            SliverToBoxAdapter(
+              child: HomeSearchBar(onTap: () => _openAllProducts(context)),
+            ),
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // Main sections
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+            // Two clearly separate entry points: products and services.
+            const SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverToBoxAdapter(
-                child: Column(
-                  children: const [
-                    ShopSectionCard(),
-                    SizedBox(height: 12),
-                    RepairSectionCard(),
-                  ],
-                ),
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-            // Category chips
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'Shop by Category',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: ShopSectionCard()),
+                      SizedBox(width: 12),
+                      Expanded(child: RepairSectionCard()),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  const CategoryChipList(),
-                ],
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-            // Featured products header
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Text(
-                      'Featured Products',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => context.push(
-                        RouteNames.productList,
-                        extra: {
-                          'categoryId': '',
-                          'categoryName': 'All Products',
-                        },
-                      ),
-                      child: const Text('See all'),
-                    ),
-                  ],
                 ),
               ),
             ),
 
-            // Featured products grid
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+            SliverToBoxAdapter(
+              child: SectionHeader(
+                title: 'Shop by Main Category',
+                actionLabel: 'View All',
+                onAction: () => context.push(RouteNames.categoryList),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 6)),
+            const SliverToBoxAdapter(child: CategoryChipList()),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+            SliverToBoxAdapter(
+              child: SectionHeader(
+                title: 'Featured Products',
+                actionLabel: 'See all',
+                onAction: () => _openAllProducts(context),
+              ),
+            ),
+
             featuredState.when(
               data: (state) => SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
