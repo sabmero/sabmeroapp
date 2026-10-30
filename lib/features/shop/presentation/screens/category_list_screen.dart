@@ -83,13 +83,18 @@ class _MainCategoryTab extends StatelessWidget {
       );
     }
 
+    // Tile height follows the user's font size so large-text phones don't overflow.
+    final scaler = MediaQuery.textScalerOf(context);
+    final tileHeight =
+        16 + 56 + 8 + scaler.scale(12) * 1.5 * 2 + 2 + scaler.scale(11) * 1.5 + 8;
+
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.78,
+        mainAxisExtent: tileHeight,
       ),
       itemCount: main.length,
       itemBuilder: (context, index) {
