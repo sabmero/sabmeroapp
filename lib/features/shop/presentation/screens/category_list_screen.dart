@@ -1,112 +1,25 @@
-// import 'package:cached_network_image/cached_network_image.dart';
-// import 'package:flutter/material.dart';
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:go_router/go_router.dart';
-// import '../../../../core/router/route_names.dart';
-// import '../../../../core/widgets/app_error_widget.dart';
-// import '../../../../core/widgets/app_loader.dart';
-// import '../providers/categories_provider.dart';
-
-// class CategoryListScreen extends ConsumerWidget {
-//   const CategoryListScreen({super.key});
-
-//   @override
-//   Widget build(BuildContext context, WidgetRef ref) {
-//     final categoriesState = ref.watch(categoriesNotifierProvider);
-
-//     return Scaffold(
-//       appBar: AppBar(title: const Text('Categories')),
-//       body: categoriesState.when(
-//         data: (categories) => GridView.builder(
-//           padding: const EdgeInsets.all(16),
-//           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-//             crossAxisCount: 2,
-//             crossAxisSpacing: 12,
-//             mainAxisSpacing: 12,
-//             childAspectRatio: 1.1,
-//           ),
-//           itemCount: categories.length,
-//           itemBuilder: (context, index) {
-//             final category = categories[index];
-//             return GestureDetector(
-//               onTap: () => context.push(
-//                 RouteNames.productList,
-//                 extra: {
-//                   'categoryId': category.id,
-//                   'categoryName': category.name,
-//                 },
-//               ),
-//               child: Container(
-//                 decoration: BoxDecoration(
-//                   color: Theme.of(context).cardColor,
-//                   borderRadius: BorderRadius.circular(12),
-//                   boxShadow: [
-//                     BoxShadow(
-//                       color: Colors.black.withAlpha(12),
-//                       blurRadius: 8,
-//                       offset: const Offset(0, 2),
-//                     ),
-//                   ],
-//                 ),
-//                 child: Column(
-//                   mainAxisAlignment: MainAxisAlignment.center,
-//                   children: [
-//                     ClipRRect(
-//                       borderRadius: BorderRadius.circular(40),
-//                       child: CachedNetworkImage(
-//                         imageUrl: category.imageUrl,
-//                         width: 64,
-//                         height: 64,
-//                         fit: BoxFit.cover,
-//                         placeholder: (_, _) => Container(
-//                           width: 64,
-//                           height: 64,
-//                           color: Theme.of(
-//                             context,
-//                           ).colorScheme.surfaceContainerHighest,
-//                         ),
-//                         errorWidget: (_, _, _) =>
-//                             const Icon(Icons.category_outlined, size: 40),
-//                       ),
-//                     ),
-//                     const SizedBox(height: 10),
-//                     Text(
-//                       category.name,
-//                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-//                         fontWeight: FontWeight.w600,
-//                       ),
-//                     ),
-//                     const SizedBox(height: 2),
-//                     Text(
-//                       '${category.productCount} items',
-//                       style: Theme.of(context).textTheme.bodySmall,
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//             );
-//           },
-//         ),
-//         loading: () => const AppLoader(),
-//         error: (e, _) => AppErrorWidget(
-//           message: e.toString(),
-//           onRetry: () => ref.invalidate(categoriesNotifierProvider),
-//         ),
-//       ),
-//     );
-//   }
-// }
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/app_loader.dart';
-import '../../../../core/widgets/skeleton.dart';
+import '../../domain/entities/category_entity.dart';
 import '../providers/categories_provider.dart';
+import '../widgets/category_image.dart';
 
+void _openCategory(BuildContext context, CategoryEntity category) {
+  context.push(
+    RouteNames.productList,
+    extra: {'categoryId': category.id, 'categoryName': category.name},
+  );
+}
+
+/// Product categories, shown two ways:
+///  * Main Category  - image grid of categories that currently have products.
+///  * All Categories - every product category from the backend, searchable.
+/// Service categories are intentionally NOT part of this screen.
 class CategoryListScreen extends ConsumerWidget {
   const CategoryListScreen({super.key});
 
@@ -114,85 +27,212 @@ class CategoryListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesState = ref.watch(categoriesNotifierProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Categories')),
-      body: categoriesState.when(
-        data: (categories) => GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.1,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Products'),
+          bottom: const TabBar(
+            indicatorColor: AppColors.accent,
+            indicatorWeight: 3,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            labelStyle: TextStyle(fontWeight: FontWeight.w700),
+            tabs: [
+              Tab(text: 'Main Category'),
+              Tab(text: 'All Categories'),
+            ],
           ),
-          itemCount: categories.length,
-          itemBuilder: (context, index) {
-            final category = categories[index];
-            return GestureDetector(
-              onTap: () => context.push(
-                RouteNames.productList,
-                extra: {
-                  'categoryId': category.id,
-                  'categoryName': category.name,
-                },
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(12),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(40),
-                      child: CachedNetworkImage(
-                        imageUrl: category.imageUrl,
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                        placeholder: (_, _) => const Shimmer(
-                          child: SkeletonBox(
-                            width: 64,
-                            height: 64,
-                            borderRadius: 40,
-                          ),
-                        ),
-                        errorWidget: (_, _, _) =>
-                            const Icon(Icons.category_outlined, size: 40),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      category.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${category.productCount} items',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
         ),
-        loading: () => const AppLoader(),
-        error: (e, _) => AppErrorWidget(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(categoriesNotifierProvider),
+        body: categoriesState.when(
+          data: (categories) => TabBarView(
+            children: [
+              _MainCategoryTab(categories: categories),
+              _AllCategoriesTab(categories: categories),
+            ],
+          ),
+          loading: () => const AppLoader(),
+          error: (e, _) => AppErrorWidget(
+            message: e.toString(),
+            onRetry: () => ref.invalidate(categoriesNotifierProvider),
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _MainCategoryTab extends StatelessWidget {
+  const _MainCategoryTab({required this.categories});
+
+  final List<CategoryEntity> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    final main = categories.where((c) => c.productCount > 0).toList();
+
+    if (main.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'No categories with products yet.\nSee the All Categories tab.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.78,
+      ),
+      itemCount: main.length,
+      itemBuilder: (context, index) {
+        final category = main[index];
+        return InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _openCategory(context, category),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(12),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CategoryImage(imageUrl: category.imageUrl, size: 56),
+                const SizedBox(height: 8),
+                Text(
+                  category.name,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${category.productCount} items',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AllCategoriesTab extends StatefulWidget {
+  const _AllCategoriesTab({required this.categories});
+
+  final List<CategoryEntity> categories;
+
+  @override
+  State<_AllCategoriesTab> createState() => _AllCategoriesTabState();
+}
+
+class _AllCategoriesTabState extends State<_AllCategoriesTab> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.trim().toLowerCase();
+    final visible = q.isEmpty
+        ? widget.categories
+        : widget.categories
+              .where((c) => c.name.toLowerCase().contains(q))
+              .toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: TextField(
+            onChanged: (v) => setState(() => _query = v),
+            decoration: const InputDecoration(
+              hintText: 'Filter categories',
+              prefixIcon: Icon(Icons.search),
+              isDense: true,
+            ),
+          ),
+        ),
+        Expanded(
+          child: visible.isEmpty
+              ? const Center(child: Text('No matching categories'))
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: visible.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final category = visible[index];
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _openCategory(context, category),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            CategoryImage(
+                              imageUrl: category.imageUrl,
+                              size: 44,
+                              radius: 10,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    category.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  Text(
+                                    '${category.productCount} items',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
