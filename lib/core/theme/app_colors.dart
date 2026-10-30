@@ -6,6 +6,10 @@ class AppColors {
 
   static const Color secondary = Color(0xFF2D2D2D);
 
+  // Brand accent (orange/yellow) used for CTAs, tab indicators and banners.
+  static const Color accent = Color(0xFFFFB82E);
+  static const Color onAccent = Color(0xFF1A3C6E);
+
   static const Color backgroundLight = Color(0xFFFFFFFF);
   static const Color backgroundDark = Color(0xFF121212);
 
