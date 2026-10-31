@@ -9,6 +9,10 @@ class NotificationEntity {
   final DateTime createdAt;
   final String? referenceId;
 
+  /// Backend type string (order_new, booking, promo ...). Used to pick the screen
+  /// to open when the notification is tapped.
+  final String rawType;
+
   const NotificationEntity({
     required this.id,
     required this.title,
@@ -17,6 +21,7 @@ class NotificationEntity {
     required this.isRead,
     required this.createdAt,
     this.referenceId,
+    this.rawType = '',
   });
 
   NotificationEntity copyWith({bool? isRead}) => NotificationEntity(
@@ -27,5 +32,6 @@ class NotificationEntity {
         isRead: isRead ?? this.isRead,
         createdAt: createdAt,
         referenceId: referenceId,
+        rawType: rawType,
       );
 }
