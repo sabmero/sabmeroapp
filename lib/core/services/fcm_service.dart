@@ -6,6 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../../features/auth/domain/entities/user_entity.dart';
+import '../router/notification_routes.dart';
 import '../router/route_names.dart';
 import '../utils/app_logger.dart';
 
@@ -59,6 +61,10 @@ class FcmService {
   static RemoteMessage? _pendingTapMessage;
 
   static bool _initialised = false;
+
+  /// Set by the app so a tap can open the right screen for the logged-in role
+  /// (a vendor and a customer open different screens for the same event).
+  static UserRole? Function()? roleGetter;
 
   /// Call from `main()` after `Firebase.initializeApp()`.
   static Future<void> init() async {
@@ -190,31 +196,31 @@ class FcmService {
     nav(location);
   }
 
-  /// Maps an FCM payload to an in-app route. The backend sends a `type` and
-  /// optional `referenceId` in the data block; adjust the keys to match your
-  /// server. Falls back to the notifications tab.
+  /// Maps an FCM payload to an in-app route using the same rules as the Alerts
+  /// list (see notification_routes.dart). Falls back to the notifications tab.
   static String _routeFor(RemoteMessage message) {
     final data = message.data;
-    final type = (data['type'] ?? '').toString().toLowerCase();
-    final refId =
-        (data['referenceId'] ?? data['id'] ?? data['orderId'] ?? '').toString();
-
-    switch (type) {
-      case 'order':
-      case 'order_new': // vendor/admin: a new order arrived
-      case 'order_status': // vendor/admin: status of an order changed
-        return refId.isNotEmpty
-            ? RouteNames.orderDetail.replaceFirst(':id', refId)
-            : RouteNames.orderList;
-      case 'repair':
-        return refId.isNotEmpty
-            ? RouteNames.repairTracking.replaceFirst(':id', refId)
-            : RouteNames.myRepairs;
-      case 'promo':
-        return RouteNames.home;
-      default:
-        return RouteNames.notifications;
+    var type = (data['type'] ?? '').toString();
+    // A payment push carries bookingId for repair bookings, orderId for orders.
+    if (type.toLowerCase() == 'payment' && data['bookingId'] != null) {
+      type = 'payment_booking';
     }
+    final refId = (data['referenceId'] ??
+            data['id'] ??
+            data['orderId'] ??
+            data['bookingId'] ??
+            data['paymentId'] ??
+            data['requestId'] ??
+            data['code'] ??
+            '')
+        .toString();
+
+    return notificationLocation(
+          type: type,
+          referenceId: refId,
+          role: roleGetter?.call(),
+        ) ??
+        RouteNames.notifications;
   }
 
   static Future<String?> getToken() => _messaging.getToken();
