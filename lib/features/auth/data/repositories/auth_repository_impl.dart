@@ -98,6 +98,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
+    // Tell the server to stop pushing this phone's notifications to the account
+    // we're leaving (must run BEFORE the auth token is cleared).
+    await remoteDataSource.clearFcmToken();
     await tokenStorage.clearToken();
     await localDataSource.clearUser();
     AppLogger.info('Logged out, cleared token + cache', tag: 'AuthRepo');
