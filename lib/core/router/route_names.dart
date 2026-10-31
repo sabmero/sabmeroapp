@@ -23,6 +23,9 @@ class RouteNames {
   static const String repairBooking = '/repair/booking';
   static const String myRepairs = '/repair/my-bookings';
   static const String repairTracking = '/repair/:id/tracking';
+  static const String serviceCategory = '/repair/category/:id';
+  static const String serviceDetail = '/repair/service-detail';
+  static String serviceCategoryPath(int id) => '/repair/category/$id';
 
   static const String vendorRegistration = '/vendor/register';
   static const String vendorDashboard = '/vendor/dashboard';

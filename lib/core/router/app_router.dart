@@ -29,6 +29,9 @@ import '../../features/repair_service/presentation/screens/repair_category_scree
 import '../../features/repair_service/presentation/screens/repair_booking_screen.dart';
 import '../../features/repair_service/presentation/screens/repair_tracking_screen.dart';
 import '../../features/repair_service/presentation/screens/repair_bookings_list_screen.dart';
+import '../../features/service_catalog/data/models/service_catalog_models.dart';
+import '../../features/service_catalog/presentation/screens/service_category_screen.dart';
+import '../../features/service_catalog/presentation/screens/service_detail_screen.dart';
 import '../../features/vendor/presentation/screens/vendor_registration_screen.dart';
 import '../../features/vendor/presentation/screens/vendor_dashboard_screen.dart';
 import '../../features/vendor/presentation/screens/vendor_product_form_screen.dart';
@@ -185,8 +188,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return RepairBookingScreen(
             categoryId: args['categoryId'] as String? ?? '',
             categoryName: args['categoryName'] as String? ?? '',
+            estimatedCharge: (args['estimatedCharge'] as num?)?.toDouble(),
           );
         },
+      ),
+      GoRoute(
+        path: RouteNames.serviceCategory,
+        builder: (context, state) => ServiceCategoryScreen(
+          categoryId: int.tryParse(state.pathParameters['id'] ?? '') ?? 0,
+        ),
+      ),
+      GoRoute(
+        path: RouteNames.serviceDetail,
+        builder: (context, state) =>
+            ServiceDetailScreen(offer: state.extra as ServiceOffer?),
       ),
       GoRoute(
         path: RouteNames.repairTracking,
