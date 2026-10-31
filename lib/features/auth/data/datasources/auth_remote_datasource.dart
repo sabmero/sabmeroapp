@@ -31,6 +31,7 @@ abstract class AuthRemoteDataSource {
     required String newPassword,
   });
   Future<void> registerFcmToken({required String token});
+  Future<void> clearFcmToken();
   Future<String> uploadKyc({required String filePath});
 }
 
@@ -225,6 +226,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
     } on DioException catch (e) {
       _apiClient.handleError(e);
+    }
+  }
+
+  @override
+  Future<void> clearFcmToken() async {
+    try {
+      await _apiClient.dio.delete(ApiConstants.fcmToken);
+    } catch (_) {
+      // Best effort — logout must never fail because of this.
     }
   }
 }
