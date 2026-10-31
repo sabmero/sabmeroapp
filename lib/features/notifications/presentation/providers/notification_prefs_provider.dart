@@ -36,7 +36,7 @@ class NotificationPrefsNotifier extends Notifier<NotificationPrefs> {
     _ready = _load();
     return const NotificationPrefs(
       pushNotifications: true,
-      promotionalAlerts: false,
+      promotionalAlerts: true,
     );
   }
 
@@ -47,7 +47,7 @@ class NotificationPrefsNotifier extends Notifier<NotificationPrefs> {
         pushNotifications:
             prefs.getBool(AppConstants.pushNotificationsKey) ?? true,
         promotionalAlerts:
-            prefs.getBool(AppConstants.promotionalAlertsKey) ?? false,
+            prefs.getBool(AppConstants.promotionalAlertsKey) ?? true,
       );
     } catch (e, st) {
       AppLogger.error(
