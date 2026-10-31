@@ -15,6 +15,10 @@ class ApiConstants {
   // GET / PUT { pushEnabled, promoAlertsEnabled } — Settings screen toggles.
   static const String notificationSettings = '/Auth/notification-settings';
 
+  // Notifications (Alerts tab history)
+  static const String notifications = '/Notifications';
+  static const String notificationsReadAll = '/Notifications/read-all';
+
   // KYC (current user)
   static const String kycSubmit = '/Auth/kyc';
   static const String kycStatus = '/Auth/kyc-status';
