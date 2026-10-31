@@ -77,6 +77,12 @@ class RepairRemoteDataSourceImpl implements RepairRemoteDataSource {
     ),
   ];
 
+  static String _serviceTypeFromName(String name) {
+    final n = name.trim();
+    if (n.isEmpty) return 'Tech';
+    return n.length > 50 ? n.substring(0, 50) : n;
+  }
+
   @override
   Future<List<RepairCategoryModel>> getRepairCategories() async {
     return _categories;
@@ -98,7 +104,11 @@ class RepairRemoteDataSourceImpl implements RepairRemoteDataSource {
   }) async {
     try {
       final body = {
-        'serviceType': _serviceTypeByCategory[categoryId] ?? 'Tech',
+        // Built-in categories keep their original mapping. Services chosen
+        // from the admin catalog send their own name (the backend column
+        // holds at most 50 characters).
+        'serviceType':
+            _serviceTypeByCategory[categoryId] ?? _serviceTypeFromName(categoryName),
         'bookingDate': scheduledDate.toUtc().toIso8601String(),
         'timeSlot': timeSlot,
         'latitude': latitude ?? 0,
