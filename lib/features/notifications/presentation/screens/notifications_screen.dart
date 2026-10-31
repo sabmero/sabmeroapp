@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sabmeroapp/core/constants/asset_constants.dart';
+import '../../../../core/router/notification_routes.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/skeleton_loaders.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/notifications_provider.dart';
 import '../widgets/notification_tile.dart';
 
@@ -74,6 +77,16 @@ class NotificationsScreen extends ConsumerWidget {
                       notification: n,
                       onTap: () {
                         if (!n.isRead) notifier.markAsRead(n.id);
+
+                        // Open the related order / booking / dashboard.
+                        final role =
+                            ref.read(authNotifierProvider).asData?.value?.role;
+                        final location = notificationLocation(
+                          type: n.rawType,
+                          referenceId: n.referenceId,
+                          role: role,
+                        );
+                        if (location != null) context.push(location);
                       },
                     );
                   },
