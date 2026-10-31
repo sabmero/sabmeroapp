@@ -14,6 +14,11 @@ class NotificationsScreen extends ConsumerWidget {
     final notificationsState = ref.watch(notificationsNotifierProvider);
     final notifier = ref.read(notificationsNotifierProvider.notifier);
 
+    Future<void> refresh() async {
+      ref.invalidate(notificationsNotifierProvider);
+      await ref.read(notificationsNotifierProvider.future);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
@@ -28,40 +33,52 @@ class NotificationsScreen extends ConsumerWidget {
         ],
       ),
       body: notificationsState.when(
-        data: (notifications) => notifications.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+        data: (notifications) => RefreshIndicator(
+          onRefresh: refresh,
+          child: notifications.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   children: [
-                    Image.asset(
-                      AssetConstants.emptyNotifications,
-                      width: 180,
-                      height: 180,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No notifications yet',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.6,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              AssetConstants.emptyNotifications,
+                              width: 180,
+                              height: 180,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'No notifications yet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
+                )
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: notifications.length,
+                  itemBuilder: (context, index) {
+                    final n = notifications[index];
+                    return NotificationTile(
+                      notification: n,
+                      onTap: () {
+                        if (!n.isRead) notifier.markAsRead(n.id);
+                      },
+                    );
+                  },
                 ),
-              )
-            : ListView.builder(
-                itemCount: notifications.length,
-                itemBuilder: (context, index) {
-                  final n = notifications[index];
-                  return NotificationTile(
-                    notification: n,
-                    onTap: () {
-                      if (!n.isRead) notifier.markAsRead(n.id);
-                    },
-                  );
-                },
-              ),
+        ),
         loading: () => const TileListSkeleton(),
         error: (e, _) => AppErrorWidget(
           message: e.toString(),
