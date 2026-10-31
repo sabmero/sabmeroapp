@@ -1,38 +1,64 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/api_constants.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../models/notification_model.dart';
 
-// NOTE: The backend exposes no notifications endpoint. Until one exists, this
-// returns an empty list rather than fabricating data. When the API is added,
-// inject ApiClient here and call it exactly like the other datasources.
 abstract class NotificationRemoteDataSource {
   Future<List<NotificationModel>> getNotifications();
   Future<void> markAsRead(String notificationId);
+  Future<void> markAllAsRead();
 }
 
 class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
-  const NotificationRemoteDataSourceImpl();
+  NotificationRemoteDataSourceImpl(this._apiClient);
 
+  final ApiClient _apiClient;
+
+  // GET /api/Notifications → { success, data: [ ... ] }
   @override
   Future<List<NotificationModel>> getNotifications() async {
-    AppLogger.info(
-      'No notifications endpoint on backend; returning empty list.',
-      tag: 'NotificationDataSource',
-    );
-    return const [];
+    try {
+      final res = await _apiClient.dio.get(ApiConstants.notifications);
+      final list = _apiClient.unwrapList(res.data);
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(NotificationModel.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      _apiClient.handleError(e);
+    }
   }
 
+  // POST /api/Notifications/{id}/read
   @override
   Future<void> markAsRead(String notificationId) async {
-    // No-op until a backend endpoint exists.
-    AppLogger.info(
-      'markAsRead is a no-op (no backend endpoint)',
-      tag: 'NotificationDataSource',
-    );
+    try {
+      await _apiClient.dio.post(
+        '${ApiConstants.notifications}/$notificationId/read',
+      );
+    } on DioException catch (e) {
+      _apiClient.handleError(e);
+    }
+  }
+
+  // POST /api/Notifications/read-all
+  @override
+  Future<void> markAllAsRead() async {
+    try {
+      await _apiClient.dio.post(ApiConstants.notificationsReadAll);
+      AppLogger.info(
+        'All notifications marked as read',
+        tag: 'NotificationDataSource',
+      );
+    } on DioException catch (e) {
+      _apiClient.handleError(e);
+    }
   }
 }
 
 final notificationRemoteDataSourceProvider =
     Provider<NotificationRemoteDataSource>(
-      (_) => const NotificationRemoteDataSourceImpl(),
+      (ref) => NotificationRemoteDataSourceImpl(ref.watch(apiClientProvider)),
     );
