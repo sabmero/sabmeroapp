@@ -22,6 +22,30 @@ class ServiceCategoryScreen extends ConsumerStatefulWidget {
 class _ServiceCategoryScreenState extends ConsumerState<ServiceCategoryScreen> {
   int? _subId;
 
+  // Explicit colours so the label is readable whether selected or not.
+  Widget _chip(
+    BuildContext context,
+    String label,
+    bool selected,
+    VoidCallback onTap,
+  ) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      selectedColor: primary,
+      backgroundColor: theme.cardColor,
+      side: BorderSide(color: selected ? primary : theme.dividerColor),
+      labelStyle: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: selected ? Colors.white : theme.colorScheme.onSurface,
+      ),
+      onSelected: (_) => onTap(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final treeAsync = ref.watch(serviceCategoryTreeProvider);
@@ -59,17 +83,13 @@ class _ServiceCategoryScreenState extends ConsumerState<ServiceCategoryScreen> {
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      ChoiceChip(
-                        label: const Text('All'),
-                        selected: _subId == null,
-                        onSelected: (_) => setState(() => _subId = null),
-                      ),
+                      _chip(context, 'All', _subId == null, () {
+                        setState(() => _subId = null);
+                      }),
                       for (final sub in node.children)
-                        ChoiceChip(
-                          label: Text(sub.name),
-                          selected: _subId == sub.id,
-                          onSelected: (_) => setState(() => _subId = sub.id),
-                        ),
+                        _chip(context, sub.name, _subId == sub.id, () {
+                          setState(() => _subId = sub.id);
+                        }),
                     ],
                   ),
                   const SizedBox(height: 12),
