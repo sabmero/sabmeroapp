@@ -9,6 +9,7 @@ class NotificationModel extends NotificationEntity {
     required super.isRead,
     required super.createdAt,
     super.referenceId,
+    super.rawType,
   });
 
   /// Parses one item of GET /api/Notifications:
@@ -24,6 +25,7 @@ class NotificationModel extends NotificationEntity {
           DateTime.tryParse((json['createdAt'] ?? '').toString())?.toLocal() ??
           DateTime.now(),
       referenceId: json['referenceId']?.toString(),
+      rawType: (json['type'] ?? '').toString(),
     );
   }
 
