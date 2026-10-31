@@ -26,6 +26,15 @@ class NotificationRepositoryImpl implements NotificationRepository {
       throw ServerFailure(message: e.message);
     }
   }
+
+  @override
+  Future<void> markAllAsRead() async {
+    try {
+      await remoteDataSource.markAllAsRead();
+    } on ServerException catch (e) {
+      throw ServerFailure(message: e.message);
+    }
+  }
 }
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
