@@ -494,10 +494,14 @@ class RepairBookingScreen extends ConsumerStatefulWidget {
     super.key,
     required this.categoryId,
     required this.categoryName,
+    this.estimatedCharge,
   });
 
   final String categoryId;
   final String categoryName;
+
+  /// Price of the service chosen from the catalog (null for built-in categories).
+  final double? estimatedCharge;
 
   @override
   ConsumerState<RepairBookingScreen> createState() =>
@@ -702,6 +706,8 @@ class _RepairBookingScreenState extends ConsumerState<RepairBookingScreen> {
   // Estimated service charge shown on the QR card. Uses the category's base
   // charge; the final charge is set by the technician on completion.
   double _serviceCharge() {
+    final given = widget.estimatedCharge;
+    if (given != null && given > 0) return given;
     final categories = ref.read(repairCategoriesProvider).asData?.value;
     if (categories != null) {
       for (final c in categories) {
