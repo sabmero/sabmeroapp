@@ -454,7 +454,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 ),
               ),
               SliverToBoxAdapter(
-                child: ResponsiveBody(
+                child: MediaQuery.withClampedTextScaling(
+                  maxScaleFactor: 1.1,
+                  child: ResponsiveBody(
                   child: Padding(
                     padding: Responsive.pagePadding(context),
                     child: Column(
@@ -465,8 +467,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             Expanded(
                               child: Text(
                                 product.name,
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.w700),
+                                style: const TextStyle(
+                                  fontSize: 19,
+                                  height: 1.3,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ],
@@ -529,7 +534,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 _selectedVariant?.price ?? product.basePrice,
                               ),
                               style: TextStyle(
-                                fontSize: 26,
+                                fontSize: 24,
                                 fontWeight: FontWeight.w800,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
@@ -587,6 +592,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         const SizedBox(height: 100),
                       ],
                     ),
+                  ),
                   ),
                 ),
               ),
