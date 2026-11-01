@@ -448,6 +448,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         ? product.imageUrls
                         : [product.primaryImage],
                     selectedIndex: _selectedImageIndex,
+                    discountPercent: product.discountPercent,
                     onImageSelected: (i) =>
                         setState(() => _selectedImageIndex = i),
                   ),
@@ -455,7 +456,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               ),
               SliverToBoxAdapter(
                 child: MediaQuery.withClampedTextScaling(
-                  maxScaleFactor: 1.1,
+                  maxScaleFactor: 1.15,
                   child: ResponsiveBody(
                   child: Padding(
                     padding: Responsive.pagePadding(context),
@@ -524,52 +525,61 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 10,
-                          runSpacing: 4,
-                          children: [
-                            Text(
-                              FormatUtils.price(
-                                _selectedVariant?.price ?? product.basePrice,
-                              ),
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                            if (product.hasDiscount) ...[
+                        // Price, old price and the discount badge on one line;
+                        // the line shrinks to fit on narrow screens.
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
                               Text(
-                                FormatUtils.price(product.oldPrice!),
+                                FormatUtils.price(
+                                  _selectedVariant?.price ?? product.basePrice,
+                                ),
+                                maxLines: 1,
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  decoration: TextDecoration.lineThrough,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '-${product.discountPercent}% OFF',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12,
+                              if (product.hasDiscount) ...[
+                                const SizedBox(width: 10),
+                                Text(
+                                  FormatUtils.price(product.oldPrice!),
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    decoration: TextDecoration.lineThrough,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '-${product.discountPercent}%',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                         const SizedBox(height: 20),
                         Text(
@@ -673,10 +683,12 @@ class _ImageCarousel extends StatefulWidget {
     required this.imageUrls,
     required this.selectedIndex,
     required this.onImageSelected,
+    this.discountPercent = 0,
   });
 
   final List<String> imageUrls;
   final int selectedIndex;
+  final int discountPercent;
   final void Function(int) onImageSelected;
 
   @override
@@ -735,6 +747,28 @@ class _ImageCarouselState extends State<_ImageCarousel> {
             ),
           ),
         ),
+        if (widget.discountPercent > 0)
+          Positioned(
+            left: 12,
+            bottom: 12,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '-${widget.discountPercent}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+          ),
         if (urls.length > 1)
           Positioned(
             bottom: 12,
