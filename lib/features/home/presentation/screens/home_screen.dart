@@ -10,6 +10,7 @@ import '../../../shop/presentation/providers/categories_provider.dart';
 import '../../../shop/presentation/widgets/product_card.dart';
 import '../widgets/category_chip_list.dart';
 import '../widgets/home_search_bar.dart';
+import '../widgets/offers_banner.dart';
 import '../widgets/repair_section_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/shop_section_card.dart';
@@ -132,7 +133,9 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+            const SliverToBoxAdapter(child: OffersBanner()),
+            const SliverToBoxAdapter(child: SizedBox(height: 4)),
 
             SliverToBoxAdapter(
               child: SectionHeader(
