@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../data/datasources/auth_local_datasource.dart';
+import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
@@ -27,6 +28,11 @@ class AuthNotifier extends AsyncNotifier<UserEntity?> {
   /// refetch, no race with the async rebuild. Used after an Edit Profile save.
   void setUser(UserEntity user) {
     state = AsyncValue.data(user);
+    // Keep the saved copy in step, so the photo / email / phone stay the same
+    // after the app is closed and reopened (even when offline).
+    ref
+        .read(authLocalDataSourceProvider)
+        .cacheUser(UserModel.fromEntity(user));
   }
 
   Future<void> login({required String phone, required String password}) async {
