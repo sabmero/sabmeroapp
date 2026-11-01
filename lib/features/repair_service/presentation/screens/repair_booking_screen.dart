@@ -482,6 +482,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_date_utils.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_text_field.dart';
+import '../../../../core/widgets/contact_details_fields.dart';
 import '../../../payment/presentation/widgets/payment_qr_card.dart';
 import '../../domain/entities/repair_category_entity.dart';
 import '../providers/repair_categories_provider.dart';
@@ -511,6 +512,7 @@ class RepairBookingScreen extends ConsumerStatefulWidget {
 class _RepairBookingScreenState extends ConsumerState<RepairBookingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _addressController = TextEditingController();
+  final _contact = ContactDetailsController();
   final _descController = TextEditingController();
   DateTime? _selectedDate;
   String? _selectedSlot;
@@ -527,12 +529,18 @@ class _RepairBookingScreenState extends ConsumerState<RepairBookingScreen> {
   @override
   void dispose() {
     _addressController.dispose();
+    _contact.dispose();
     _descController.dispose();
     super.dispose();
   }
 
   Future<void> _confirmBooking() async {
     if (!_formKey.currentState!.validate()) return;
+    final contactError = _contact.validate();
+    if (contactError != null) {
+      _showError(contactError);
+      return;
+    }
     if (_selectedDate == null) {
       _showError('Please select a date');
       return;
@@ -551,7 +559,7 @@ class _RepairBookingScreenState extends ConsumerState<RepairBookingScreen> {
         .createBooking(
           categoryId: widget.categoryId,
           categoryName: widget.categoryName,
-          address: _addressController.text.trim(),
+          address: _contact.withAddress(_addressController.text),
           scheduledDate: _selectedDate!,
           timeSlot: _selectedSlot!,
           problemDescription: _descController.text.trim().isNotEmpty
@@ -728,6 +736,10 @@ class _RepairBookingScreenState extends ConsumerState<RepairBookingScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            _SectionLabel('Contact Details'),
+            const SizedBox(height: 8),
+            ContactDetailsFields(controller: _contact),
+            const SizedBox(height: 20),
             _SectionLabel('Your Address'),
             const SizedBox(height: 8),
             LocationAddressField(
