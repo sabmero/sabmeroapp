@@ -13,6 +13,10 @@ abstract class ProfileRemoteDataSource {
   Future<UserModel> updateProfile({
     String? name,
     String? email,
+    String? phone,
+    String? address,
+    String? gender,
+    String? currentPassword,
     String? imagePath,
   });
   Future<String> getKycStatus();
@@ -49,12 +53,21 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   Future<UserModel> updateProfile({
     String? name,
     String? email,
+    String? phone,
+    String? address,
+    String? gender,
+    String? currentPassword,
     String? imagePath,
   }) async {
     try {
       final formData = FormData.fromMap({
         if (name != null && name.isNotEmpty) 'fullName': name,
         if (email != null && email.isNotEmpty) 'email': email,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (address != null && address.isNotEmpty) 'address': address,
+        if (gender != null) 'gender': gender,
+        if (currentPassword != null && currentPassword.isNotEmpty)
+          'currentPassword': currentPassword,
         if (imagePath != null)
           'profilePicture': await MultipartFile.fromFile(imagePath),
       });
