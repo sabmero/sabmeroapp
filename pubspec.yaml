@@ -46,6 +46,7 @@ dependencies:
   cached_network_image: ^3.4.1
   connectivity_plus: ^7.1.1
   url_launcher: ^6.3.2
+  share_plus: ^10.1.4
   pinput: ^6.0.2
   firebase_core: ^4.10.0
   image_picker: ^1.2.2
