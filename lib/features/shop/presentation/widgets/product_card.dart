@@ -282,7 +282,7 @@ class ProductCard extends StatelessWidget {
             // Text size is capped so a large system font can't stretch the card
             // and push the price out of view.
             MediaQuery.withClampedTextScaling(
-              maxScaleFactor: 1.1,
+              maxScaleFactor: 1.15,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
@@ -300,57 +300,18 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      product.vendorName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  FormatUtils.price(product.basePrice),
-                                  maxLines: 1,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  ),
-                                ),
-                              ),
-                              if (product.hasDiscount)
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    FormatUtils.price(product.oldPrice!),
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      decoration: TextDecoration.lineThrough,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                            ],
+                          child: Text(
+                            product.vendorName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontSize: 11),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         const Icon(
                           Icons.star_rounded,
                           size: 13,
@@ -368,6 +329,43 @@ class ProductCard extends StatelessWidget {
                               ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 6),
+                    // Price and old price side by side. If they do not fit
+                    // (big font / long number) the whole line shrinks to fit.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            FormatUtils.price(product.basePrice),
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          if (product.hasDiscount) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              FormatUtils.price(product.oldPrice!),
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 11,
+                                decoration: TextDecoration.lineThrough,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
