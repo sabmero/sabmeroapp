@@ -24,13 +24,27 @@ class ProfileNotifier extends AsyncNotifier<UserEntity?> {
   Future<UserEntity> updateProfile({
     String? name,
     String? email,
+    String? phone,
+    String? address,
+    String? gender,
+    String? currentPassword,
     String? imagePath,
   }) async {
     state = const AsyncValue.loading();
     try {
       final updated = await UpdateProfileUseCase(
         ref.read(profileRepositoryProvider),
-      )(UpdateProfileParams(name: name, email: email, imagePath: imagePath));
+      )(
+        UpdateProfileParams(
+          name: name,
+          email: email,
+          phone: phone,
+          address: address,
+          gender: gender,
+          currentPassword: currentPassword,
+          imagePath: imagePath,
+        ),
+      );
       state = AsyncValue.data(updated);
       AppLogger.info('Profile updated', tag: 'ProfileNotifier');
       return updated;
