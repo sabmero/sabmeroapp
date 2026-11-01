@@ -382,6 +382,7 @@
 // }
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -424,7 +425,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           body: CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight: 320,
+                // 1:1 square photo area: as tall as the screen is wide.
+                expandedHeight: MediaQuery.of(context).size.width.clamp(
+                  280.0,
+                  560.0,
+                ),
                 pinned: true,
                 actions: [
                   IconButton(
@@ -463,6 +468,15 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (product.imageUrls.length > 1) ...[
+                          _ThumbnailStrip(
+                            imageUrls: product.imageUrls,
+                            selectedIndex: _selectedImageIndex,
+                            onSelected: (i) =>
+                                setState(() => _selectedImageIndex = i),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                         Row(
                           children: [
                             Expanded(
@@ -552,10 +566,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                   maxLines: 1,
                                   style: TextStyle(
                                     fontSize: 15,
+                                    fontWeight: FontWeight.w600,
                                     decoration: TextDecoration.lineThrough,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                                    decorationColor: Colors.red.shade400,
+                                    color: Colors.red.shade400,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -678,6 +692,61 @@ class _StockIndicator extends StatelessWidget {
   }
 }
 
+/// Small photo strip under the big photo, so people can see right away that
+/// the product has more photos. Tap one to open it.
+class _ThumbnailStrip extends StatelessWidget {
+  const _ThumbnailStrip({
+    required this.imageUrls,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<String> imageUrls;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return SizedBox(
+      height: 62,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: imageUrls.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final selected = i == selectedIndex;
+          return GestureDetector(
+            onTap: () => onSelected(i),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: selected ? primary : Colors.black12,
+                  width: selected ? 2.5 : 1,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrls[i],
+                  fit: BoxFit.contain,
+                  errorWidget: (_, _, _) =>
+                      const Icon(Icons.image_outlined, size: 24),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _ImageCarousel extends StatefulWidget {
   const _ImageCarousel({
     required this.imageUrls,
@@ -701,6 +770,20 @@ class _ImageCarouselState extends State<_ImageCarousel> {
   );
 
   @override
+  void didUpdateWidget(covariant _ImageCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A thumbnail was tapped: slide the big photo to it.
+    if (_controller.hasClients &&
+        widget.selectedIndex != (_controller.page?.round() ?? 0)) {
+      _controller.animateToPage(
+        widget.selectedIndex,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -719,7 +802,7 @@ class _ImageCarouselState extends State<_ImageCarousel> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+        const ColoredBox(color: Colors.white),
         PageView.builder(
           controller: _controller,
           itemCount: urls.length,
@@ -939,47 +1022,72 @@ class _ZoomableImageState extends State<_ZoomableImage>
   }
 }
 
+/// The message that goes with the shared photo: app name, product name,
+/// price (with the discount) and a short description.
 String _shareText(ProductEntity product, double price) {
   final b = StringBuffer()
-    ..writeln(product.name)
+    ..writeln('*SabMero*')
+    ..writeln('*${product.name}*')
     ..write('Price: ${FormatUtils.price(price)}');
   if (product.hasDiscount) {
     b.write(
-      ' (was ${FormatUtils.price(product.oldPrice!)}, -${product.discountPercent}% OFF)',
+      '  (was ${FormatUtils.price(product.oldPrice!)}, -${product.discountPercent}% OFF)',
     );
   }
   b.writeln();
-  final img = product.imageUrls.isNotEmpty
-      ? product.imageUrls.first
-      : product.primaryImage;
-  if (img.isNotEmpty) b.writeln(img);
-  b.write('Get it on the SabMero app.');
+  var desc = product.description.trim().replaceAll(RegExp(r'\s+'), ' ');
+  if (desc.isNotEmpty && desc != product.name.trim()) {
+    if (desc.length > 160) desc = '${desc.substring(0, 157)}...';
+    b.writeln(desc);
+  }
+  b.write('Order it on the SabMero app.');
   return b.toString();
 }
 
 /// Opens the phone's own share sheet (WhatsApp, Messenger, SMS, Viber,
-/// email, ... whatever apps are installed). Uses a tiny native bridge in
-/// MainActivity.kt, so no extra package is needed.
+/// email, ...) with the product photo and details. Uses a small native
+/// bridge in MainActivity.kt, so no extra package is needed.
 Future<void> _shareProduct(
   BuildContext context,
   ProductEntity product,
   double price,
 ) async {
   final text = _shareText(product, price);
+  final messenger = ScaffoldMessenger.of(context);
   try {
-    await const MethodChannel('sabmero/share').invokeMethod('shareText', {
+    // Download the first photo so it is sent as a real picture, not a link.
+    Uint8List? image;
+    final url = product.imageUrls.isNotEmpty
+        ? product.imageUrls.first
+        : product.primaryImage;
+    if (url.isNotEmpty) {
+      try {
+        final res = await Dio().get<List<int>>(
+          url,
+          options: Options(
+            responseType: ResponseType.bytes,
+            receiveTimeout: const Duration(seconds: 15),
+          ),
+        );
+        if (res.data != null && res.data!.isNotEmpty) {
+          image = Uint8List.fromList(res.data!);
+        }
+      } catch (_) {
+        image = null; // share the text only
+      }
+    }
+    await const MethodChannel('sabmero/share').invokeMethod('shareProduct', {
       'text': text,
       'subject': product.name,
+      'image': image,
     });
   } catch (_) {
     await Clipboard.setData(ClipboardData(text: text));
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Product details copied. Paste them in any app.'),
-        ),
-      );
-    }
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Product details copied. Paste them in any app.'),
+      ),
+    );
   }
 }
 
