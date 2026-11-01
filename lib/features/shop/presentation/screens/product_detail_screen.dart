@@ -222,70 +222,268 @@
 //   }
 // }
 
-// class _ImageCarousel extends StatelessWidget {
-//   const _ImageCarousel({
-//     required this.imageUrls,
-//     required this.selectedIndex,
-//     required this.onImageSelected,
-//   });
+// class _ImageCarousel extends StatefulWidget {
+  const _ImageCarousel({
+    required this.imageUrls,
+    required this.selectedIndex,
+    required this.onImageSelected,
+  });
 
-//   final List<String> imageUrls;
-//   final int selectedIndex;
-//   final void Function(int) onImageSelected;
+  final List<String> imageUrls;
+  final int selectedIndex;
+  final void Function(int) onImageSelected;
 
-//   @override
-//   Widget build(BuildContext context) {
-//     if (imageUrls.isEmpty) {
-//       return Container(
-//         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-//         child: const Icon(Icons.image_outlined, size: 80),
-//       );
-//     }
+  @override
+  State<_ImageCarousel> createState() => _ImageCarouselState();
+}
 
-//     return Stack(
-//       fit: StackFit.expand,
-//       children: [
-//         CachedNetworkImage(
-//           imageUrl: imageUrls[selectedIndex],
-//           fit: BoxFit.cover,
-//           placeholder: (_, _) => Container(
-//             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-//           ),
-//           errorWidget: (_, _, _) => const Icon(Icons.image_outlined, size: 80),
-//         ),
-//         if (imageUrls.length > 1)
-//           Positioned(
-//             bottom: 12,
-//             left: 0,
-//             right: 0,
-//             child: Row(
-//               mainAxisAlignment: MainAxisAlignment.center,
-//               children: List.generate(
-//                 imageUrls.length,
-//                 (i) => GestureDetector(
-//                   onTap: () => onImageSelected(i),
-//                   child: AnimatedContainer(
-//                     duration: const Duration(milliseconds: 200),
-//                     margin: const EdgeInsets.symmetric(horizontal: 3),
-//                     width: i == selectedIndex ? 20 : 8,
-//                     height: 8,
-//                     decoration: BoxDecoration(
-//                       color: i == selectedIndex
-//                           ? Colors.white
-//                           : Colors.white.withAlpha(140),
-//                       borderRadius: BorderRadius.circular(4),
-//                     ),
-//                   ),
-//                 ),
-//               ),
-//             ),
-//           ),
-//       ],
-//     );
-//   }
-// }
+class _ImageCarouselState extends State<_ImageCarousel> {
+  late final PageController _controller = PageController(
+    initialPage: widget.selectedIndex,
+  );
 
-// class _AddToCartBar extends ConsumerWidget {
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final urls = widget.imageUrls;
+    if (urls.isEmpty) {
+      return Container(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: const Icon(Icons.image_outlined, size: 80),
+      );
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+        PageView.builder(
+          controller: _controller,
+          itemCount: urls.length,
+          onPageChanged: widget.onImageSelected,
+          itemBuilder: (_, i) => GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                fullscreenDialog: true,
+                builder: (_) =>
+                    _FullScreenGallery(imageUrls: urls, initialIndex: i),
+              ),
+            ),
+            child: CachedNetworkImage(
+              imageUrl: urls[i],
+              fit: BoxFit.contain,
+              placeholder: (_, _) => const Shimmer(
+                child: SkeletonBox(
+                  width: double.infinity,
+                  height: double.infinity,
+                  borderRadius: 0,
+                ),
+              ),
+              errorWidget: (_, _, _) =>
+                  const Icon(Icons.image_outlined, size: 80),
+            ),
+          ),
+        ),
+        if (urls.length > 1)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  urls.length,
+                  (i) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: i == widget.selectedIndex ? 20 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: i == widget.selectedIndex
+                          ? Colors.white
+                          : Colors.white.withAlpha(140),
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black26, blurRadius: 2),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Full-screen photo viewer: swipe between photos, pinch to zoom in/out,
+/// double-tap to zoom in or reset.
+class _FullScreenGallery extends StatefulWidget {
+  const _FullScreenGallery({
+    required this.imageUrls,
+    required this.initialIndex,
+  });
+
+  final List<String> imageUrls;
+  final int initialIndex;
+
+  @override
+  State<_FullScreenGallery> createState() => _FullScreenGalleryState();
+}
+
+class _FullScreenGalleryState extends State<_FullScreenGallery> {
+  late final PageController _page = PageController(
+    initialPage: widget.initialIndex,
+  );
+  late int _index = widget.initialIndex;
+  bool _zoomed = false;
+
+  @override
+  void dispose() {
+    _page.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text('${_index + 1} / ${widget.imageUrls.length}'),
+      ),
+      body: PageView.builder(
+        controller: _page,
+        itemCount: widget.imageUrls.length,
+        // Swiping between photos is paused while a photo is zoomed in, so
+        // dragging moves the photo instead.
+        physics: _zoomed
+            ? const NeverScrollableScrollPhysics()
+            : const PageScrollPhysics(),
+        onPageChanged: (i) => setState(() {
+          _index = i;
+          _zoomed = false;
+        }),
+        itemBuilder: (_, i) => _ZoomableImage(
+          key: ValueKey(widget.imageUrls[i]),
+          url: widget.imageUrls[i],
+          onZoomChanged: (z) {
+            if (z != _zoomed) setState(() => _zoomed = z);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ZoomableImage extends StatefulWidget {
+  const _ZoomableImage({
+    super.key,
+    required this.url,
+    required this.onZoomChanged,
+  });
+
+  final String url;
+  final ValueChanged<bool> onZoomChanged;
+
+  @override
+  State<_ZoomableImage> createState() => _ZoomableImageState();
+}
+
+class _ZoomableImageState extends State<_ZoomableImage>
+    with SingleTickerProviderStateMixin {
+  final _controller = TransformationController();
+  Offset _tapPosition = Offset.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      widget.onZoomChanged(_controller.value.getMaxScaleOnAxis() > 1.01);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDoubleTap() {
+    if (_controller.value.getMaxScaleOnAxis() > 1.01) {
+      _controller.value = Matrix4.identity();
+    } else {
+      const scale = 2.5;
+      final m = Matrix4.identity();
+      m.setEntry(0, 0, scale);
+      m.setEntry(1, 1, scale);
+      m.setEntry(0, 3, -_tapPosition.dx * (scale - 1));
+      m.setEntry(1, 3, -_tapPosition.dy * (scale - 1));
+      _controller.value = m;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onDoubleTapDown: (d) => _tapPosition = d.localPosition,
+      onDoubleTap: _onDoubleTap,
+      child: InteractiveViewer(
+        transformationController: _controller,
+        minScale: 1,
+        maxScale: 5,
+        child: Center(
+          child: CachedNetworkImage(
+            imageUrl: widget.url,
+            fit: BoxFit.contain,
+            placeholder: (_, _) => const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+            errorWidget: (_, _, _) => const Icon(
+              Icons.broken_image_outlined,
+              color: Colors.white54,
+              size: 64,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _shareText(ProductEntity product, double price) {
+  final b = StringBuffer()
+    ..writeln(product.name)
+    ..write('Price: ${FormatUtils.price(price)}');
+  if (product.hasDiscount) {
+    b.write(
+      ' (was ${FormatUtils.price(product.oldPrice!)}, -${product.discountPercent}% OFF)',
+    );
+  }
+  b.writeln();
+  final img = product.imageUrls.isNotEmpty
+      ? product.imageUrls.first
+      : product.primaryImage;
+  if (img.isNotEmpty) b.writeln(img);
+  b.write('Get it on the SabMero app.');
+  return b.toString();
+}
+
+/// Opens the phone's own share sheet (WhatsApp, Messenger, SMS, Viber,
+/// email, ... whatever apps are installed).
+void _shareProduct(BuildContext context, ProductEntity product, double price) {
+  Share.share(_shareText(product, price), subject: product.name);
+}
+
+class _AddToCartBar extends ConsumerWidget {
 //   const _AddToCartBar({
 //     required this.product,
 //     required this.selectedVariant,
@@ -385,6 +583,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:sabmeroapp/reponsive.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -425,6 +624,22 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               SliverAppBar(
                 expandedHeight: 320,
                 pinned: true,
+                actions: [
+                  IconButton(
+                    tooltip: 'Share',
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black38,
+                      foregroundColor: Colors.white,
+                    ),
+                    icon: const Icon(Icons.share_outlined),
+                    onPressed: () => _shareProduct(
+                      context,
+                      product,
+                      _selectedVariant?.price ?? product.basePrice,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: _ImageCarousel(
                     imageUrls: product.imageUrls.isNotEmpty
@@ -502,7 +717,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 10,
+                          runSpacing: 4,
                           children: [
                             Text(
                               FormatUtils.price(
@@ -514,6 +732,36 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
+                            if (product.hasDiscount) ...[
+                              Text(
+                                FormatUtils.price(product.oldPrice!),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  decoration: TextDecoration.lineThrough,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '-${product.discountPercent}% OFF',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 20),
