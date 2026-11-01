@@ -50,6 +50,7 @@ class _VendorProductFormScreenState
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
+  final _oldPriceController = TextEditingController();
   final _uuid = const Uuid();
 
   String _categoryId = 'cat_electronics';
@@ -78,6 +79,9 @@ class _VendorProductFormScreenState
       );
       _nameController.text = existing.name;
       _descController.text = existing.description;
+      if (existing.oldPrice != null) {
+        _oldPriceController.text = existing.oldPrice!.toStringAsFixed(0);
+      }
       _categoryId = existing.categoryId;
       for (final v in existing.variants) {
         _variants.add(_VariantDraft(
@@ -98,6 +102,7 @@ class _VendorProductFormScreenState
   void dispose() {
     _nameController.dispose();
     _descController.dispose();
+    _oldPriceController.dispose();
     for (final v in _variants) {
       v.dispose();
     }
@@ -145,6 +150,7 @@ class _VendorProductFormScreenState
       imageUrls: ['https://picsum.photos/seed/${_uuid.v4()}/400/400'],
       variants: variants,
       basePrice: variants.isNotEmpty ? variants.first.price : 0,
+      oldPrice: double.tryParse(_oldPriceController.text.trim()),
       rating: _isEditing ? 0 : 0,
       reviewCount: 0,
       isAvailable: true,
@@ -213,6 +219,13 @@ class _VendorProductFormScreenState
                   .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                   .toList(),
               onChanged: (v) => setState(() => _categoryId = v!),
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: _oldPriceController,
+              label: 'Old price (Rs.) - optional',
+              hint: 'Fill only if the product is on discount',
+              keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 24),
             Row(
