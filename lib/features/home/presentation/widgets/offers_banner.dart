@@ -59,8 +59,11 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: SizedBox(
-        height: 150,
+      // Text size is capped here so a large system font can't overflow the card.
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.0,
+        child: SizedBox(
+        height: 160,
         child: PageView.builder(
           controller: _controller,
           itemCount: items.length,
@@ -94,7 +97,7 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
                                 '${p.discountPercent}% OFF',
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w900,
                                 ),
                               ),
@@ -151,6 +154,7 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
             );
           },
         ),
+      ),
       ),
     );
   }
