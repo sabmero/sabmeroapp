@@ -40,20 +40,25 @@ class CategoryChipList extends ConsumerWidget {
                   extra: {'categoryId': cat.id, 'categoryName': cat.name},
                 ),
                 child: SizedBox(
-                  width: 78,
+                  width: 96,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Column(
                       children: [
                         CategoryImage(imageUrl: cat.imageUrl, size: 60),
                         const SizedBox(height: 6),
-                        Text(
-                          cat.name,
-                          maxLines: 2,
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(fontWeight: FontWeight.w600),
+                        // Cap the system font scale here so long names such as
+                        // "Attendance Systems" wrap by word, not mid-word.
+                        MediaQuery.withClampedTextScaling(
+                          maxScaleFactor: 1.15,
+                          child: Text(
+                            cat.name,
+                            maxLines: 2,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ],
                     ),
