@@ -5,6 +5,11 @@ double _d(dynamic v) =>
 
 int _i(dynamic v) => v is num ? v.toInt() : (int.tryParse('${v ?? ''}') ?? 0);
 
+String? _text(dynamic v) {
+  final s = v?.toString().trim();
+  return (s == null || s.isEmpty) ? null : s;
+}
+
 /// Full image URL for a path returned by the API ('' when there is no image).
 String serviceImageUrl(String? path) {
   if (path == null || path.isEmpty) return '';
@@ -73,6 +78,12 @@ class ServiceOffer {
     required this.discountPercent,
     required this.categoryId,
     required this.includes,
+    this.imageUrls = const [],
+    this.durationText,
+    this.warranty,
+    this.homeServiceAvailable = true,
+    this.requirements,
+    this.isFeatured = false,
   });
 
   final String key;
@@ -86,6 +97,18 @@ class ServiceOffer {
   final int discountPercent;
   final int? categoryId;
   final List<String> includes;
+
+  // Details only catalog services have (packages leave them empty).
+  final List<String> imageUrls; // gallery, first = main image
+  final String? durationText;
+  final String? warranty;
+  final bool homeServiceAvailable;
+  final String? requirements;
+  final bool isFeatured;
+
+  /// Gallery to show: the gallery images, or the single main image.
+  List<String> get gallery =>
+      imageUrls.isNotEmpty ? imageUrls : (imageUrl.isEmpty ? const [] : [imageUrl]);
 
   bool get hasPrice => price > 0;
   bool get hasDiscount => oldPrice != null && oldPrice! > price;
@@ -110,6 +133,15 @@ class ServiceOffer {
     discountPercent: _i(j['discountPercent']),
     categoryId: j['categoryId'] == null ? null : _i(j['categoryId']),
     includes: const [],
+    imageUrls: ((j['imagePaths'] as List?) ?? [])
+        .map((e) => serviceImageUrl(e.toString()))
+        .where((e) => e.isNotEmpty)
+        .toList(),
+    durationText: _text(j['durationText']),
+    warranty: _text(j['warranty']),
+    homeServiceAvailable: j['homeServiceAvailable'] != false,
+    requirements: _text(j['requirements']),
+    isFeatured: j['isFeatured'] == true,
   );
 
   factory ServiceOffer.fromPackage(Map<String, dynamic> j) => ServiceOffer(
