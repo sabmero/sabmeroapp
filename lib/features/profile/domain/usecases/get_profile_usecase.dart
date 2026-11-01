@@ -12,8 +12,20 @@ class GetProfileUseCase implements UseCase<UserEntity, NoParams> {
 class UpdateProfileParams {
   final String? name;
   final String? email;
+  final String? phone;
+  final String? address;
+  final String? gender;
+  final String? currentPassword;
   final String? imagePath;
-  const UpdateProfileParams({this.name, this.email, this.imagePath});
+  const UpdateProfileParams({
+    this.name,
+    this.email,
+    this.phone,
+    this.address,
+    this.gender,
+    this.currentPassword,
+    this.imagePath,
+  });
 }
 
 class UpdateProfileUseCase implements UseCase<UserEntity, UpdateProfileParams> {
@@ -23,6 +35,10 @@ class UpdateProfileUseCase implements UseCase<UserEntity, UpdateProfileParams> {
   Future<UserEntity> call(UpdateProfileParams p) => repository.updateProfile(
     name: p.name,
     email: p.email,
+    phone: p.phone,
+    address: p.address,
+    gender: p.gender,
+    currentPassword: p.currentPassword,
     imagePath: p.imagePath,
   );
 }
