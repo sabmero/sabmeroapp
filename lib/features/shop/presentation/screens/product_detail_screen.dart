@@ -565,7 +565,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                   FormatUtils.price(product.oldPrice!),
                                   maxLines: 1,
                                   style: TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                     decoration: TextDecoration.lineThrough,
                                     decorationColor: Colors.red.shade400,
@@ -1040,7 +1040,8 @@ String _shareText(ProductEntity product, double price) {
     if (desc.length > 160) desc = '${desc.substring(0, 157)}...';
     b.writeln(desc);
   }
-  b.write('Order it on the SabMero app.');
+  b.writeln('Order it on the SabMero app.');
+  b.write('Open: https://sabmero.com/?product=${product.id}');
   return b.toString();
 }
 
