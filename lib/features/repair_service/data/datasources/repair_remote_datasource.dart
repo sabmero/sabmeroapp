@@ -77,6 +77,22 @@ class RepairRemoteDataSourceImpl implements RepairRemoteDataSource {
     ),
   ];
 
+  // Ids of catalog entries are passed through the booking screen as
+  // 'svc_<id>' (service), 'pkg_<id>' (package) or 'cat_<id>' (category).
+  static Map<String, int> _catalogLinkFields(String id) {
+    final m = RegExp(r'^(svc|pkg|cat)_(\d+)$').firstMatch(id);
+    if (m == null) return const {};
+    final n = int.parse(m.group(2)!);
+    switch (m.group(1)) {
+      case 'svc':
+        return {'serviceId': n};
+      case 'pkg':
+        return {'servicePackageId': n};
+      default:
+        return {'serviceCategoryId': n};
+    }
+  }
+
   static String _serviceTypeFromName(String name) {
     final n = name.trim();
     if (n.isEmpty) return 'Tech';
@@ -114,6 +130,8 @@ class RepairRemoteDataSourceImpl implements RepairRemoteDataSource {
         'latitude': latitude ?? 0,
         'longitude': longitude ?? 0,
         'serviceAddress': address,
+        // Links the booking to the catalog entry picked in the app.
+        ..._catalogLinkFields(categoryId),
         if (damagePhotoUrls.isNotEmpty)
           'damageImagePath': damagePhotoUrls.first,
         // Backend accepts "Cash" | "QR".
