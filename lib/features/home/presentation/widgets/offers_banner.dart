@@ -4,7 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../service_catalog/data/models/service_catalog_models.dart';
+import '../../../service_catalog/presentation/providers/service_catalog_provider.dart';
 import '../../../shop/presentation/providers/categories_provider.dart';
+
+/// One photo in the offers row (a discounted product or service).
+class _OfferItem {
+  const _OfferItem({
+    required this.imageUrl,
+    required this.discountPercent,
+    required this.isService,
+    required this.open,
+  });
+
+  final String imageUrl;
+  final int discountPercent;
+  final bool isService;
+  final void Function(BuildContext context) open;
+}
 
 /// Sliding row of product photos that are on discount, each with a red
 /// "40% OFF" badge. Hidden completely when there are no offers.
@@ -45,15 +62,43 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final items = ref
+    final products = ref
             .watch(productsNotifierProvider(null))
             .asData
             ?.value
             .items
             .where((p) => p.hasDiscount && p.stock > 0)
-            .take(8)
             .toList() ??
         const [];
+    final serviceOffers = ref
+            .watch(serviceOffersProvider)
+            .asData
+            ?.value
+            .where((o) => o.hasDiscount && o.imageUrl.isNotEmpty)
+            .toList() ??
+        const <ServiceOffer>[];
+
+    // Products first, then services; both open their own detail page.
+    final items = <_OfferItem>[
+      for (final p in products)
+        _OfferItem(
+          imageUrl: p.primaryImage,
+          discountPercent: p.discountPercent,
+          isService: false,
+          open: (ctx) => ctx.push(
+            RouteNames.productDetail.replaceFirst(':id', p.id),
+          ),
+        ),
+      for (final o in serviceOffers)
+        _OfferItem(
+          imageUrl: o.imageUrl,
+          discountPercent: o.discountPercent > 0
+              ? o.discountPercent
+              : (((o.oldPrice! - o.price) / o.oldPrice!) * 100).round(),
+          isService: true,
+          open: (ctx) => ctx.push(RouteNames.serviceDetail, extra: o),
+        ),
+    ].take(10).toList();
     _count = items.length;
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -75,9 +120,7 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
                 return Padding(
                   padding: EdgeInsets.fromLTRB(i == 0 ? 16 : 4, 0, 4, 0),
                   child: GestureDetector(
-                    onTap: () => context.push(
-                      RouteNames.productDetail.replaceFirst(':id', p.id),
-                    ),
+                    onTap: () => p.open(context),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Stack(
@@ -85,7 +128,7 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
                         children: [
                           const ColoredBox(color: Colors.white),
                           CachedNetworkImage(
-                            imageUrl: p.primaryImage,
+                            imageUrl: p.imageUrl,
                             fit: BoxFit.contain,
                             errorWidget: (_, _, _) =>
                                 const Icon(Icons.image_outlined, size: 40),
@@ -112,6 +155,29 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
                               ),
                             ),
                           ),
+                          if (p.isService)
+                            Positioned(
+                              left: 8,
+                              bottom: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A3C6E),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'Service',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
