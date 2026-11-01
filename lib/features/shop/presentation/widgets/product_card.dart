@@ -197,9 +197,12 @@ class ProductCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
+                    // White behind the photo; the whole photo is shown
+                    // (never cropped) and fitted into the same box size.
+                    const ColoredBox(color: Colors.white),
                     CachedNetworkImage(
                       imageUrl: product.primaryImage,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       placeholder: (context, url) => const Shimmer(
                         child: SkeletonBox(
                           width: double.infinity,
