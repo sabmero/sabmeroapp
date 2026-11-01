@@ -44,6 +44,7 @@ class VendorRemoteDataSourceImpl implements VendorRemoteDataSource {
       'name': p.name,
       'description': p.description,
       'price': p.basePrice,
+      if (p.oldPrice != null) 'oldPrice': p.oldPrice,
       'stock': p.stock,
       'categoryId': int.tryParse(p.categoryId) ?? 0,
       if (_toStoredPath(p.imageUrls) != null)
