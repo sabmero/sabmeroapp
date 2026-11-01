@@ -382,7 +382,6 @@
 // }
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1022,72 +1021,47 @@ class _ZoomableImageState extends State<_ZoomableImage>
   }
 }
 
-/// The message that goes with the shared photo: app name, product name,
-/// price (with the discount) and a short description.
 String _shareText(ProductEntity product, double price) {
   final b = StringBuffer()
-    ..writeln('*SabMero*')
-    ..writeln('*${product.name}*')
+    ..writeln(product.name)
     ..write('Price: ${FormatUtils.price(price)}');
   if (product.hasDiscount) {
     b.write(
-      '  (was ${FormatUtils.price(product.oldPrice!)}, -${product.discountPercent}% OFF)',
+      ' (was ${FormatUtils.price(product.oldPrice!)}, -${product.discountPercent}% OFF)',
     );
   }
   b.writeln();
-  var desc = product.description.trim().replaceAll(RegExp(r'\s+'), ' ');
-  if (desc.isNotEmpty && desc != product.name.trim()) {
-    if (desc.length > 160) desc = '${desc.substring(0, 157)}...';
-    b.writeln(desc);
-  }
-  b.write('Order it on the SabMero app.');
+  final img = product.imageUrls.isNotEmpty
+      ? product.imageUrls.first
+      : product.primaryImage;
+  if (img.isNotEmpty) b.writeln(img);
+  b.write('Get it on the SabMero app.');
   return b.toString();
 }
 
 /// Opens the phone's own share sheet (WhatsApp, Messenger, SMS, Viber,
-/// email, ...) with the product photo and details. Uses a small native
-/// bridge in MainActivity.kt, so no extra package is needed.
+/// email, ... whatever apps are installed). Uses a tiny native bridge in
+/// MainActivity.kt, so no extra package is needed.
 Future<void> _shareProduct(
   BuildContext context,
   ProductEntity product,
   double price,
 ) async {
   final text = _shareText(product, price);
-  final messenger = ScaffoldMessenger.of(context);
   try {
-    // Download the first photo so it is sent as a real picture, not a link.
-    Uint8List? image;
-    final url = product.imageUrls.isNotEmpty
-        ? product.imageUrls.first
-        : product.primaryImage;
-    if (url.isNotEmpty) {
-      try {
-        final res = await Dio().get<List<int>>(
-          url,
-          options: Options(
-            responseType: ResponseType.bytes,
-            receiveTimeout: const Duration(seconds: 15),
-          ),
-        );
-        if (res.data != null && res.data!.isNotEmpty) {
-          image = Uint8List.fromList(res.data!);
-        }
-      } catch (_) {
-        image = null; // share the text only
-      }
-    }
-    await const MethodChannel('sabmero/share').invokeMethod('shareProduct', {
+    await const MethodChannel('sabmero/share').invokeMethod('shareText', {
       'text': text,
       'subject': product.name,
-      'image': image,
     });
   } catch (_) {
     await Clipboard.setData(ClipboardData(text: text));
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Product details copied. Paste them in any app.'),
-      ),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Product details copied. Paste them in any app.'),
+        ),
+      );
+    }
   }
 }
 
