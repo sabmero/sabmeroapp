@@ -6,6 +6,7 @@ class UserModel extends UserEntity {
     required super.name,
     required super.phone,
     super.email,
+    super.gender,
     super.address,
     super.profileImageUrl,
     required super.isKycVerified,
@@ -22,6 +23,7 @@ class UserModel extends UserEntity {
       name: json['fullName'] as String? ?? json['name'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       email: json['email'] as String?,
+      gender: json['gender'] as String?,
       address: json['address'] as String? ?? '',
       profileImageUrl:
           json['profilePictureUrl'] as String? ??
@@ -41,6 +43,7 @@ class UserModel extends UserEntity {
       'fullName': name,
       'phone': phone,
       'email': email,
+      'gender': gender,
       'address': address,
       'profileImageUrl': profileImageUrl,
       'isKycVerified': isKycVerified,
@@ -56,6 +59,7 @@ class UserModel extends UserEntity {
       name: entity.name,
       phone: entity.phone,
       email: entity.email,
+      gender: entity.gender,
       address: entity.address,
       profileImageUrl: entity.profileImageUrl,
       isKycVerified: entity.isKycVerified,
