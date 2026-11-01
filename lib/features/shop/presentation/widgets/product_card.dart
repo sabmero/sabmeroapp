@@ -360,10 +360,10 @@ class ProductCard extends StatelessWidget {
                               maxLines: 1,
                               style: TextStyle(
                                 fontSize: 11,
+                                fontWeight: FontWeight.w600,
                                 decoration: TextDecoration.lineThrough,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
+                                decorationColor: Colors.red.shade400,
+                                color: Colors.red.shade400,
                               ),
                             ),
                           ],
