@@ -40,13 +40,29 @@ class ServiceOfferCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    offer.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          offer.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (offer.isFeatured)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 4),
+                          child: Icon(
+                            Icons.star_rounded,
+                            size: 18,
+                            color: AppColors.accent,
+                          ),
+                        ),
+                    ],
                   ),
                   if (offer.description.isNotEmpty) ...[
                     const SizedBox(height: 2),
@@ -55,6 +71,23 @@ class ServiceOfferCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                  if (offer.durationText != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule, size: 14, color: theme.hintColor),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            offer.durationText!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                   const SizedBox(height: 6),
