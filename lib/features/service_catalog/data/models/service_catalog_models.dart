@@ -106,8 +106,8 @@ class ServiceOffer {
     description: (j['description'] ?? '').toString(),
     imageUrl: serviceImageUrl(j['imagePath']?.toString()),
     price: _d(j['charge']),
-    oldPrice: null,
-    discountPercent: 0,
+    oldPrice: j['oldPrice'] == null ? null : _d(j['oldPrice']),
+    discountPercent: _i(j['discountPercent']),
     categoryId: j['categoryId'] == null ? null : _i(j['categoryId']),
     includes: const [],
   );
