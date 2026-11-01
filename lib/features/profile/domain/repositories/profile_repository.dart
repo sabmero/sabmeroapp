@@ -6,6 +6,10 @@ abstract class ProfileRepository {
   Future<UserEntity> updateProfile({
     String? name,
     String? email,
+    String? phone,
+    String? address,
+    String? gender,
+    String? currentPassword,
     String? imagePath,
   });
   Future<String> getKycStatus();
