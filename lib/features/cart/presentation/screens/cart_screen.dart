@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sabmeroapp/core/constants/asset_constants.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/format_utils.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/cart_item_tile.dart';
@@ -11,6 +12,9 @@ import '../widgets/order_summary_card.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
+
+  // Orders above this subtotal get free delivery.
+  static const double _freeDeliveryAbove = 1000;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,9 +46,15 @@ class CartScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (cartState.total <= _freeDeliveryAbove) ...[
+                  _FreeDeliveryHint(
+                    remaining: _freeDeliveryAbove - cartState.total,
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 OrderSummaryCard(
                   subtotal: cartState.total,
-                  deliveryFee: cartState.total > 1000 ? 0 : 100,
+                  deliveryFee: cartState.total > _freeDeliveryAbove ? 0 : 100,
                   discount: 0,
                 ),
                 const SizedBox(height: 80),
@@ -87,6 +97,37 @@ class CartScreen extends ConsumerWidget {
       ),
     );
     if (confirmed == true) notifier.clearCart();
+  }
+}
+
+class _FreeDeliveryHint extends StatelessWidget {
+  const _FreeDeliveryHint({required this.remaining});
+
+  final double remaining;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withAlpha(40),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.local_shipping_outlined, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Add ${FormatUtils.price(remaining)} more for free delivery',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
