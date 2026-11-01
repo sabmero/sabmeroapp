@@ -28,12 +28,20 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<UserEntity> updateProfile({
     String? name,
     String? email,
+    String? phone,
+    String? address,
+    String? gender,
+    String? currentPassword,
     String? imagePath,
   }) async {
     try {
       return await remoteDataSource.updateProfile(
         name: name,
         email: email,
+        phone: phone,
+        address: address,
+        gender: gender,
+        currentPassword: currentPassword,
         imagePath: imagePath,
       );
     } on AuthException catch (e) {
