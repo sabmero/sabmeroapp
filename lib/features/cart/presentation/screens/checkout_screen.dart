@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format_utils.dart';
+import '../../../../core/widgets/contact_details_fields.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../orders/presentation/providers/orders_provider.dart';
 import '../../../payment/presentation/widgets/payment_qr_card.dart';
@@ -30,6 +31,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   double? _longitude;
 
   // Promo state
+  final _contact = ContactDetailsController();
   final _promoController = TextEditingController();
   bool _validatingPromo = false;
   PromoValidation? _appliedPromo;
@@ -41,6 +43,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   void dispose() {
     _addressController.dispose();
+    _contact.dispose();
     _promoController.dispose();
     super.dispose();
   }
@@ -85,6 +88,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final cartState = ref.read(cartNotifierProvider);
     if (cartState.isEmpty) return;
 
+    final contactError = _contact.validate();
+    if (contactError != null) {
+      _snack(contactError, isError: true);
+      return;
+    }
     if (_addressController.text.trim().isEmpty) {
       _snack('Please enter a delivery address', isError: true);
       return;
@@ -105,7 +113,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         .read(ordersNotifierProvider.notifier)
         .placeOrder(
           items: cartState.items,
-          address: _addressController.text.trim(),
+          address: _contact.withAddress(_addressController.text),
           paymentMethod: _selectedPayment,
           total: total,
           promoCode: _appliedPromo?.valid == true ? _appliedPromo!.code : null,
@@ -170,6 +178,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const _SectionHeader(title: 'Contact Details'),
+          const SizedBox(height: 8),
+          ContactDetailsFields(controller: _contact),
+          const SizedBox(height: 20),
           const _SectionHeader(title: 'Delivery Address'),
           const SizedBox(height: 8),
           // Same pattern as repair booking: real live location or manual entry.
