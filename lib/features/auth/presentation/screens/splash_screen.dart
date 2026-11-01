@@ -132,23 +132,42 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'sabmero',
+                const Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: 'Sab'),
+                      TextSpan(
+                        text: 'Mero',
+                        style: TextStyle(color: AppColors.accent),
+                      ),
+                    ],
+                  ),
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 38,
+                    fontSize: 42,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
+                    letterSpacing: 1,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
-                  'Shop. Repair. Delivered.',
+                  'Shopping & Services',
                   style: TextStyle(
-                    color: Colors.white.withAlpha(200),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withAlpha(235),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Everything You Need All in One Place',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withAlpha(190),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 56),
@@ -164,8 +183,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           value: _progressController.value,
                           minHeight: 6,
                           backgroundColor: Colors.white.withAlpha(38),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white.withAlpha(230),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.accent,
                           ),
                         );
                       },
