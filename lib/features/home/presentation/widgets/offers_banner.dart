@@ -62,14 +62,19 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final products = ref
-            .watch(productsNotifierProvider(null))
-            .asData
-            ?.value
-            .items
+    final productsState = ref.watch(productsNotifierProvider(null)).asData?.value;
+    // Keep loading pages (up to 10 x 20 products) so every discounted product shows.
+    if (productsState != null &&
+        productsState.hasMore &&
+        !productsState.isLoadingMore &&
+        productsState.page < 10) {
+      Future.microtask(
+        () => ref.read(productsNotifierProvider(null).notifier).loadMore(),
+      );
+    }
+    final products = (productsState?.items ?? const [])
             .where((p) => p.hasDiscount && p.stock > 0)
-            .toList() ??
-        const [];
+            .toList();
     final serviceOffers = ref
             .watch(serviceOffersProvider)
             .asData
@@ -98,14 +103,35 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
           isService: true,
           open: (ctx) => ctx.push(RouteNames.serviceDetail, extra: o),
         ),
-    ].take(10).toList();
+    ];
     _count = items.length;
     if (items.isEmpty) return const SizedBox.shrink();
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      // Photos are square, as wide as half the screen.
-      child: LayoutBuilder(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFE3E3), Color(0xFFFFF4E0)],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Text(
+              'Special Offers',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFFB71C1C),
+              ),
+            ),
+          ),
+          LayoutBuilder(
         builder: (context, constraints) {
           final height = constraints.maxWidth * 0.48;
           return SizedBox(
@@ -127,12 +153,14 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
                         fit: StackFit.expand,
                         children: [
                           const ColoredBox(color: Colors.white),
-                          CachedNetworkImage(
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: CachedNetworkImage(
                             imageUrl: p.imageUrl,
                             fit: BoxFit.contain,
                             errorWidget: (_, _, _) =>
                                 const Icon(Icons.image_outlined, size: 40),
-                          ),
+                          )),
                           Positioned(
                             left: 8,
                             top: 8,
@@ -187,6 +215,8 @@ class _OffersBannerState extends ConsumerState<OffersBanner> {
             ),
           );
         },
+      ),
+        ],
       ),
     );
   }
