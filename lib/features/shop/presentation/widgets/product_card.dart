@@ -359,7 +359,7 @@ class ProductCard extends StatelessWidget {
                               FormatUtils.price(product.oldPrice!),
                               maxLines: 1,
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 decoration: TextDecoration.lineThrough,
                                 decorationColor: Colors.red.shade400,
