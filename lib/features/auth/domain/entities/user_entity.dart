@@ -25,6 +25,7 @@ class UserEntity {
   final String name;
   final String phone;
   final String? email;
+  final String? gender; // 'Male' | 'Female' | null
   final String address;
   final String? profileImageUrl;
   final bool isKycVerified;
@@ -37,6 +38,7 @@ class UserEntity {
     required this.name,
     required this.phone,
     this.email,
+    this.gender,
     this.address = '',
     this.profileImageUrl,
     required this.isKycVerified,
@@ -52,6 +54,7 @@ class UserEntity {
   UserEntity copyWith({
     String? name,
     String? email,
+    String? gender,
     String? address,
     String? profileImageUrl,
     bool? isKycVerified,
@@ -62,6 +65,7 @@ class UserEntity {
       name: name ?? this.name,
       phone: phone,
       email: email ?? this.email,
+      gender: gender ?? this.gender,
       address: address ?? this.address,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       isKycVerified: isKycVerified ?? this.isKycVerified,
