@@ -1015,7 +1015,7 @@ class _AddToCartBar extends ConsumerWidget {
     );
     const buttonPadding = EdgeInsets.symmetric(horizontal: 8);
     const buttonSize = Size(0, 50);
-    const labelStyle = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
+    const labelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.w700);
 
     return MediaQuery(
       data: mq.copyWith(textScaler: cappedScaler),
@@ -1039,62 +1039,73 @@ class _AddToCartBar extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Row 1: quantity stepper
+            // One line: quantity stepper + Add to Cart + Order Now.
+            // Button labels shrink to fit, so it works on every screen size.
             Row(
               children: [
-                Text(
-                  'Quantity',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
                 Container(
+                  height: 50,
                   decoration: BoxDecoration(
                     border: Border.all(color: scheme.outline),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.remove, size: 18),
-                        onPressed: quantity > 1
+                      InkWell(
+                        borderRadius: const BorderRadius.horizontal(
+                          left: Radius.circular(11),
+                        ),
+                        onTap: quantity > 1
                             ? () => onQuantityChanged(quantity - 1)
                             : null,
+                        child: SizedBox(
+                          width: 32,
+                          height: 50,
+                          child: Icon(
+                            Icons.remove,
+                            size: 18,
+                            color: quantity > 1 ? null : scheme.outline,
+                          ),
+                        ),
                       ),
                       ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 28),
+                        constraints: const BoxConstraints(minWidth: 22),
                         child: Text(
                           '$quantity',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
                       ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.add, size: 18),
-                        onPressed: quantity < 99
+                      InkWell(
+                        borderRadius: const BorderRadius.horizontal(
+                          right: Radius.circular(11),
+                        ),
+                        onTap: quantity < 99
                             ? () => onQuantityChanged(quantity + 1)
                             : null,
+                        child: const SizedBox(
+                          width: 32,
+                          height: 50,
+                          child: Icon(Icons.add, size: 18),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // Row 2: two equal-width buttons, label always on one line
-            Row(
-              children: [
+                const SizedBox(width: 8),
                 Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
                       minimumSize: buttonSize,
                       padding: buttonPadding,
                       shape: buttonShape,
+                      elevation: 4,
+                      shadowColor: AppColors.accent.withAlpha(150),
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.onAccent,
+                      disabledBackgroundColor: scheme.surfaceContainerHighest,
                     ),
                     onPressed: canAdd
                         ? () {
@@ -1123,31 +1134,57 @@ class _AddToCartBar extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: buttonSize,
-                      padding: buttonPadding,
-                      shape: buttonShape,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: canAdd
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF2E5FA8), Color(0xFF16345F)],
+                            )
+                          : null,
+                      boxShadow: canAdd
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF16345F).withAlpha(110),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : null,
                     ),
-                    onPressed: canAdd
-                        ? () {
-                            // Direct order: put the item in the cart and jump
-                            // straight to checkout. Guests are asked to log in
-                            // here (the router redirects), then continue.
-                            cartNotifier.addItem(
-                              product: product,
-                              variant: variant,
-                              quantity: quantity,
-                            );
-                            context.push(RouteNames.checkout);
-                          }
-                        : null,
-                    child: const _ButtonLabel(
-                      icon: Icons.flash_on_rounded,
-                      text: 'Order Now',
-                      style: labelStyle,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: buttonSize,
+                        padding: buttonPadding,
+                        shape: buttonShape,
+                        elevation: 0,
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: canAdd
+                          ? () {
+                              // Direct order: put the item in the cart and
+                              // jump straight to checkout. Guests are asked to
+                              // log in here (the router redirects), then
+                              // continue.
+                              cartNotifier.addItem(
+                                product: product,
+                                variant: variant,
+                                quantity: quantity,
+                              );
+                              context.push(RouteNames.checkout);
+                            }
+                          : null,
+                      child: const _ButtonLabel(
+                        icon: Icons.flash_on_rounded,
+                        text: 'Order Now',
+                        style: labelStyle,
+                      ),
                     ),
                   ),
                 ),
