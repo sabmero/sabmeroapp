@@ -45,6 +45,9 @@ class ProductEntity {
   final List<String> sizeOptions;
   final List<String> colorOptions;
   final double basePrice;
+
+  /// Regular price before the discount, when the seller has set one.
+  final double? oldPrice;
   final int stock;
   final String unit;
   final double rating;
@@ -65,6 +68,7 @@ class ProductEntity {
     this.sizeOptions = const [],
     this.colorOptions = const [],
     required this.basePrice,
+    this.oldPrice,
     this.stock = 0,
     this.unit = 'pcs',
     required this.rating,
@@ -79,4 +83,10 @@ class ProductEntity {
 
   ProductVariantEntity? get defaultVariant =>
       variants.isNotEmpty ? variants.first : null;
+
+  bool get hasDiscount => oldPrice != null && oldPrice! > basePrice;
+
+  int get discountPercent => hasDiscount
+      ? (((oldPrice! - basePrice) / oldPrice!) * 100).round()
+      : 0;
 }
