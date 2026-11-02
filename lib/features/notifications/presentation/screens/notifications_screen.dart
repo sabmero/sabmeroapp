@@ -6,8 +6,34 @@ import '../../../../core/router/notification_routes.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/skeleton_loaders.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../domain/entities/notification_entity.dart';
 import '../providers/notifications_provider.dart';
 import '../widgets/notification_tile.dart';
+
+/// The list with "Today" / "Yesterday" / "Earlier" headings in between.
+List<Object> _withDayHeaders(List<NotificationEntity> items) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  String label(DateTime t) {
+    final d = DateTime(t.year, t.month, t.day);
+    final diff = today.difference(d).inDays;
+    if (diff <= 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    return 'Earlier';
+  }
+
+  final rows = <Object>[];
+  String? last;
+  for (final n in items) {
+    final l = label(n.createdAt.toLocal());
+    if (l != last) {
+      rows.add(l);
+      last = l;
+    }
+    rows.add(n);
+  }
+  return rows;
+}
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -26,6 +52,7 @@ class NotificationsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
+          if (notificationsState.asData?.value.any((n) => !n.isRead) ?? false)
           TextButton(
             onPressed: notifier.markAllRead,
             child: const Text(
@@ -70,9 +97,21 @@ class NotificationsScreen extends ConsumerWidget {
                 )
               : ListView.builder(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: notifications.length,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: _withDayHeaders(notifications).length,
                   itemBuilder: (context, index) {
-                    final n = notifications[index];
+                    final row = _withDayHeaders(notifications)[index];
+                    if (row is String) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Text(
+                          row,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      );
+                    }
+                    final n = row as NotificationEntity;
                     return NotificationTile(
                       notification: n,
                       onTap: () {
