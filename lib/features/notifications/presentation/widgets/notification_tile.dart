@@ -32,17 +32,19 @@ class NotificationTile extends StatelessWidget {
     final typeColor = _colorFor(notification.type, context);
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: notification.isRead
-              ? Colors.transparent
-              : Theme.of(context).colorScheme.primary.withAlpha(8),
-          border: Border(
-            bottom: BorderSide(
-              color: Theme.of(context).dividerColor,
-              width: 0.5,
-            ),
+              ? Theme.of(context).cardColor
+              : Theme.of(context).colorScheme.primary.withAlpha(14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: notification.isRead
+                ? Theme.of(context).dividerColor
+                : Theme.of(context).colorScheme.primary.withAlpha(60),
           ),
         ),
         child: Row(
