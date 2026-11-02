@@ -52,7 +52,18 @@ class RepairBookingModel extends RepairBookingEntity {
   });
 
   factory RepairBookingModel.fromJson(Map<String, dynamic> json) {
-    final damage = resolveImageUrl(json['damageImagePath'] as String?);
+    final rawPaths = <String>[
+      ...((json['damageImagePaths'] as List?)?.whereType<String>() ??
+          const <String>[]),
+    ];
+    final single = json['damageImagePath'] as String?;
+    if (rawPaths.isEmpty && single != null && single.isNotEmpty) {
+      rawPaths.add(single);
+    }
+    final photos = rawPaths
+        .map(resolveImageUrl)
+        .where((u) => u.isNotEmpty)
+        .toList();
     final serviceType = json['serviceType'] as String? ?? '';
     return RepairBookingModel(
       id: '${json['id'] ?? ''}',
@@ -65,8 +76,8 @@ class RepairBookingModel extends RepairBookingEntity {
           DateTime.tryParse(json['bookingDate'] as String? ?? '') ??
           DateTime.now(),
       timeSlot: json['timeSlot'] as String? ?? '',
-      problemDescription: null,
-      damagePhotoUrls: damage.isEmpty ? const [] : [damage],
+      problemDescription: json['description'] as String?,
+      damagePhotoUrls: photos,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       status: repairStatusFromString(json['status'] as String?),
