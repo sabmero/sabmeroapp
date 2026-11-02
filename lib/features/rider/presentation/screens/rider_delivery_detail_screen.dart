@@ -5,6 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/widgets/activity_timeline.dart';
+import '../../../../core/widgets/collection_dialog.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/datasources/rider_remote_datasource.dart';
 import '../../domain/entities/rider_delivery_entity.dart';
 import '../providers/rider_provider.dart';
@@ -107,130 +110,24 @@ class _RiderDeliveryDetailScreenState
         );
     if (!mounted) return;
     setState(() => _updating = false);
+    ref.invalidate(activityTimelineProvider((kind: 'order', id: d.id)));
     _showSnack(ok ? 'Delivery updated' : 'Failed to update. Try again.');
   }
 
   /// Cash-on-delivery hand-over: Cash (amount written in words) or Online
   /// (screenshot of the customer's payment).
   Future<_Collection?> _promptForCollection(RiderDeliveryEntity d) async {
-    final wordsCtrl = TextEditingController();
-    var method = 'Cash';
-    String? shotPath;
-    String? error;
-
-    final result = await showDialog<_Collection>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setLocal) => AlertDialog(
-          title: const Text('Payment collected'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Collect ${AppConstants.currencySymbol} ${d.totalAmount.toStringAsFixed(0)} from the customer.',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 16),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'Cash',
-                      label: Text('Cash'),
-                      icon: Icon(Icons.payments_outlined),
-                    ),
-                    ButtonSegment(
-                      value: 'Online',
-                      label: Text('Online'),
-                      icon: Icon(Icons.qr_code_2_rounded),
-                    ),
-                  ],
-                  selected: {method},
-                  onSelectionChanged: (v) => setLocal(() {
-                    method = v.first;
-                    error = null;
-                  }),
-                ),
-                const SizedBox(height: 16),
-                if (method == 'Cash')
-                  TextField(
-                    controller: wordsCtrl,
-                    maxLength: 200,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount received in words',
-                      hintText: 'e.g. Five thousand rupees only',
-                    ),
-                  )
-                else
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await ImagePicker().pickImage(
-                        source: ImageSource.gallery,
-                        imageQuality: 80,
-                      );
-                      if (picked != null) {
-                        setLocal(() {
-                          shotPath = picked.path;
-                          error = null;
-                        });
-                      }
-                    },
-                    icon: Icon(
-                      shotPath == null
-                          ? Icons.upload_file_rounded
-                          : Icons.check_circle_rounded,
-                    ),
-                    label: Text(
-                      shotPath == null
-                          ? 'Attach payment screenshot'
-                          : 'Screenshot attached',
-                    ),
-                  ),
-                if (error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (method == 'Cash' && wordsCtrl.text.trim().isEmpty) {
-                  setLocal(() => error = 'Write the amount in words.');
-                  return;
-                }
-                if (method == 'Online' && shotPath == null) {
-                  setLocal(() => error = 'Attach the payment screenshot.');
-                  return;
-                }
-                Navigator.pop(
-                  dialogContext,
-                  _Collection(
-                    method: method,
-                    amountInWords:
-                        method == 'Cash' ? wordsCtrl.text.trim() : null,
-                    screenshotLocalPath: method == 'Online' ? shotPath : null,
-                  ),
-                );
-              },
-              child: const Text('Mark Delivered'),
-            ),
-          ],
-        ),
-      ),
+    final r = await showCollectionDialog(
+      context,
+      fixedAmount: d.totalAmount,
+      confirmLabel: 'Mark Delivered',
     );
-    wordsCtrl.dispose();
-    return result;
+    if (r == null) return null;
+    return _Collection(
+      method: r.method,
+      amountInWords: r.amountInWords,
+      screenshotLocalPath: r.screenshotLocalPath,
+    );
   }
 
   @override
@@ -283,9 +180,39 @@ class _RiderDeliveryDetailScreenState
             title: 'Order',
             children: [
               for (final item in d.items)
-                _InfoRow(
-                  icon: Icons.inventory_2_outlined,
-                  label: '${item.quantity}x ${item.productName}',
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: item.imageUrl.isEmpty
+                            ? const SizedBox(
+                                width: 64,
+                                height: 64,
+                                child: Icon(Icons.inventory_2_outlined),
+                              )
+                            : CachedNetworkImage(
+                                imageUrl: item.imageUrl,
+                                width: 64,
+                                height: 64,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => const SizedBox(
+                                  width: 64,
+                                  height: 64,
+                                  child: Icon(Icons.broken_image_outlined),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '${item.quantity}x ${item.productName}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               _InfoRow(
                 icon: d.paymentMethod.toUpperCase() == 'QR'
@@ -299,6 +226,13 @@ class _RiderDeliveryDetailScreenState
                     'Total: ${AppConstants.currencySymbol} ${d.totalAmount.toStringAsFixed(0)}',
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          ActivityTimelineCard(
+            kind: 'order',
+            id: d.id,
+            title: 'Delivery history',
+            showStaff: false,
           ),
           const SizedBox(height: 24),
           if (d.isActive)
