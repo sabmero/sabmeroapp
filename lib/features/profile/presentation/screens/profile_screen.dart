@@ -310,6 +310,23 @@ class ProfileScreen extends ConsumerWidget {
                       title: 'Edit Profile',
                       onTap: () => context.push(RouteNames.editProfile),
                     ),
+                    if (user.role == UserRole.customer) ...[
+                      ProfileMenuTile(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'My Orders',
+                        onTap: () => context.push(RouteNames.orderList),
+                      ),
+                      ProfileMenuTile(
+                        icon: Icons.build_outlined,
+                        title: 'My Bookings',
+                        onTap: () => context.push(RouteNames.myRepairs),
+                      ),
+                      ProfileMenuTile(
+                        icon: Icons.location_on_outlined,
+                        title: 'Saved Addresses',
+                        onTap: () => context.push(RouteNames.addressList),
+                      ),
+                    ],
                   ],
                 ),
                 MenuSection(
@@ -475,7 +492,14 @@ class ProfileHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
-                  _RoleBadge(role: user.role),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _RoleBadge(role: user.role),
+                      if (user.isKycVerified) const _VerifiedBadge(),
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   _ContactRow(icon: Icons.phone_outlined, text: user.phone),
                   if (user.email != null && user.email!.isNotEmpty) ...[
@@ -525,6 +549,35 @@ class _ContactRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _VerifiedBadge extends StatelessWidget {
+  const _VerifiedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.successColor.withAlpha(30),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified_rounded, size: 13, color: AppColors.successColor),
+          const SizedBox(width: 4),
+          Text(
+            'Verified',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColors.successColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
