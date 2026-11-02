@@ -36,11 +36,19 @@ class TechnicianJobsNotifier extends AsyncNotifier<List<TechnicianJobEntity>> {
     String jobId,
     TechnicianJobStatus status, {
     double? serviceCharge,
+    String? collectionMethod,
+    String? amountInWords,
+    String? collectionScreenshotPath,
   }) async {
     try {
-      await ref
-          .read(technicianRemoteDataSourceProvider)
-          .updateJobStatus(jobId, status, serviceCharge: serviceCharge);
+      await ref.read(technicianRemoteDataSourceProvider).updateJobStatus(
+            jobId,
+            status,
+            serviceCharge: serviceCharge,
+            collectionMethod: collectionMethod,
+            amountInWords: amountInWords,
+            collectionScreenshotPath: collectionScreenshotPath,
+          );
       await refresh();
       return true;
     } catch (e, st) {
