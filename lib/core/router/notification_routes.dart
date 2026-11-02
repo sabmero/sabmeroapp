@@ -46,6 +46,12 @@ String? notificationLocation({
           ? withId(RouteNames.technicianJobDetail)
           : RouteNames.technicianJobs;
 
+    // Technician: the admin paid me.
+    case 'technicianpayment':
+      return role == UserRole.deliveryRider
+          ? RouteNames.riderJobs
+          : RouteNames.technicianJobs;
+
     // Payment on an order verified / rejected.
     case 'payment':
       return hasId ? withId(RouteNames.orderDetail) : RouteNames.orderList;
