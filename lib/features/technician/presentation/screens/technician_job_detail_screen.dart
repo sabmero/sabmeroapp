@@ -1,10 +1,13 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_date_utils.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../data/datasources/technician_remote_datasource.dart';
 import '../../domain/entities/technician_job_entity.dart';
 import '../providers/technician_provider.dart';
 
@@ -59,53 +62,184 @@ class _TechnicianJobDetailScreenState
     final next = job.nextStatus;
     if (next == null) return;
 
-    double? charge;
+    _Collection? collection;
     if (next == TechnicianJobStatus.completed) {
-      charge = await _promptForCharge(job.serviceCharge);
-      if (charge == null) return; // cancelled
+      collection = await _promptForCollection(job.serviceCharge);
+      if (collection == null) return; // cancelled
     }
 
     setState(() => _updating = true);
-    final ok = await ref
-        .read(technicianJobsProvider.notifier)
-        .updateStatus(job.id, next, serviceCharge: charge);
+
+    // Online payment: upload the screenshot first, then complete the job.
+    String? proofPath;
+    if (collection != null &&
+        collection.method == 'Online' &&
+        collection.screenshotLocalPath != null) {
+      try {
+        proofPath = await ref
+            .read(technicianRemoteDataSourceProvider)
+            .uploadPaymentProof(collection.screenshotLocalPath!);
+      } catch (e, st) {
+        AppLogger.error('Proof upload failed',
+            tag: 'TechnicianJobDetail', error: e, stackTrace: st);
+      }
+      if (proofPath == null || proofPath.isEmpty) {
+        if (!mounted) return;
+        setState(() => _updating = false);
+        _showSnack('Could not upload the screenshot. Try again.');
+        return;
+      }
+    }
+
+    final ok = await ref.read(technicianJobsProvider.notifier).updateStatus(
+          job.id,
+          next,
+          serviceCharge: collection?.amount,
+          collectionMethod: collection?.method,
+          amountInWords: collection?.amountInWords,
+          collectionScreenshotPath: proofPath,
+        );
     if (!mounted) return;
     setState(() => _updating = false);
     _showSnack(ok ? 'Job updated' : 'Failed to update job. Try again.');
   }
 
-  Future<double?> _promptForCharge(double? existing) async {
-    final controller = TextEditingController(
+  /// Asks how much was collected and how: Cash (amount written in words) or
+  /// Online (payment screenshot).
+  Future<_Collection?> _promptForCollection(double? existing) async {
+    final amountCtrl = TextEditingController(
       text: existing != null ? existing.toStringAsFixed(0) : '',
     );
-    return showDialog<double>(
+    final wordsCtrl = TextEditingController();
+    var method = 'Cash';
+    String? shotPath;
+    String? error;
+
+    final result = await showDialog<_Collection>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Final service charge'),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            prefixText: '${AppConstants.currencySymbol} ',
-            hintText: 'Enter the amount collected',
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setLocal) => AlertDialog(
+          title: const Text('Payment collected'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Amount collected',
+                    prefixText: '${AppConstants.currencySymbol} ',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'Cash',
+                      label: Text('Cash'),
+                      icon: Icon(Icons.payments_outlined),
+                    ),
+                    ButtonSegment(
+                      value: 'Online',
+                      label: Text('Online'),
+                      icon: Icon(Icons.qr_code_2_rounded),
+                    ),
+                  ],
+                  selected: {method},
+                  onSelectionChanged: (v) => setLocal(() {
+                    method = v.first;
+                    error = null;
+                  }),
+                ),
+                const SizedBox(height: 16),
+                if (method == 'Cash')
+                  TextField(
+                    controller: wordsCtrl,
+                    maxLength: 200,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount in words',
+                      hintText: 'e.g. Five hundred rupees only',
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await ImagePicker().pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 80,
+                      );
+                      if (picked != null) {
+                        setLocal(() {
+                          shotPath = picked.path;
+                          error = null;
+                        });
+                      }
+                    },
+                    icon: Icon(
+                      shotPath == null
+                          ? Icons.upload_file_rounded
+                          : Icons.check_circle_rounded,
+                    ),
+                    label: Text(
+                      shotPath == null
+                          ? 'Attach payment screenshot'
+                          : 'Screenshot attached',
+                    ),
+                  ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    error!,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ],
+              ],
+            ),
           ),
-          autofocus: true,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final amount = double.tryParse(amountCtrl.text.trim());
+                if (amount == null || amount <= 0) {
+                  setLocal(() => error = 'Enter the amount collected.');
+                  return;
+                }
+                if (method == 'Cash' && wordsCtrl.text.trim().isEmpty) {
+                  setLocal(() => error = 'Write the amount in words.');
+                  return;
+                }
+                if (method == 'Online' && shotPath == null) {
+                  setLocal(() => error = 'Attach the payment screenshot.');
+                  return;
+                }
+                Navigator.pop(
+                  dialogContext,
+                  _Collection(
+                    amount: amount,
+                    method: method,
+                    amountInWords:
+                        method == 'Cash' ? wordsCtrl.text.trim() : null,
+                    screenshotLocalPath: method == 'Online' ? shotPath : null,
+                  ),
+                );
+              },
+              child: const Text('Mark Completed'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = double.tryParse(controller.text.trim());
-              Navigator.pop(context, value ?? 0);
-            },
-            child: const Text('Mark Completed'),
-          ),
-        ],
       ),
     );
+    amountCtrl.dispose();
+    wordsCtrl.dispose();
+    return result;
   }
 
   @override
@@ -177,6 +311,56 @@ class _TechnicianJobDetailScreenState
                 ),
             ],
           ),
+          if ((job.description ?? '').trim().isNotEmpty ||
+              job.images.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: 'Problem details',
+              children: [
+                if ((job.description ?? '').trim().isNotEmpty)
+                  _InfoRow(
+                    icon: Icons.notes_rounded,
+                    label: job.description!.trim(),
+                  ),
+                if (job.images.isNotEmpty)
+                  SizedBox(
+                    height: 120,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: job.images.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (ctx, i) => GestureDetector(
+                        onTap: () => showDialog(
+                          context: ctx,
+                          builder: (_) => Dialog(
+                            child: InteractiveViewer(
+                              child: CachedNetworkImage(
+                                imageUrl: job.images[i],
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: CachedNetworkImage(
+                            imageUrl: job.images[i],
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => const SizedBox(
+                              width: 120,
+                              height: 120,
+                              child: Icon(Icons.broken_image_outlined),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 24),
           if (job.nextStatus != null)
             FilledButton.icon(
@@ -281,4 +465,18 @@ class _InfoRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Collection {
+  const _Collection({
+    required this.amount,
+    required this.method,
+    this.amountInWords,
+    this.screenshotLocalPath,
+  });
+
+  final double amount;
+  final String method; // 'Cash' | 'Online'
+  final String? amountInWords;
+  final String? screenshotLocalPath;
 }
