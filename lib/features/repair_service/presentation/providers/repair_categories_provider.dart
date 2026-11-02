@@ -68,6 +68,19 @@ class RepairBookingNotifier extends Notifier<RepairBookingState> {
         );
       }
 
+      // Damage photos are local files on the phone: upload each one and send
+      // the server paths (sending the local path left everyone with a broken
+      // image).
+      final uploadedPhotos = <String>[];
+      for (final p in damagePhotoUrls) {
+        if (p.startsWith('/uploads/') || p.startsWith('http')) {
+          uploadedPhotos.add(p);
+        } else {
+          final serverPath = await repository.uploadDamagePhoto(p);
+          if (serverPath.isNotEmpty) uploadedPhotos.add(serverPath);
+        }
+      }
+
       final booking = await CreateRepairBookingUseCase(repository)(
         CreateRepairBookingParams(
           categoryId: categoryId,
@@ -76,7 +89,7 @@ class RepairBookingNotifier extends Notifier<RepairBookingState> {
           scheduledDate: scheduledDate,
           timeSlot: timeSlot,
           problemDescription: problemDescription,
-          damagePhotoUrls: damagePhotoUrls,
+          damagePhotoUrls: uploadedPhotos,
           latitude: latitude,
           longitude: longitude,
           paymentMethod: paymentMethod,
