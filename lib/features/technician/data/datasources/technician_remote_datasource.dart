@@ -12,7 +12,13 @@ abstract class TechnicianRemoteDataSource {
     String jobId,
     TechnicianJobStatus status, {
     double? serviceCharge,
+    String? collectionMethod,
+    String? amountInWords,
+    String? collectionScreenshotPath,
   });
+
+  /// Uploads an online-payment screenshot and returns its server path.
+  Future<String> uploadPaymentProof(String filePath);
 }
 
 class TechnicianRemoteDataSourceImpl implements TechnicianRemoteDataSource {
@@ -40,11 +46,19 @@ class TechnicianRemoteDataSourceImpl implements TechnicianRemoteDataSource {
     String jobId,
     TechnicianJobStatus status, {
     double? serviceCharge,
+    String? collectionMethod,
+    String? amountInWords,
+    String? collectionScreenshotPath,
   }) async {
     try {
       final body = {
         'status': technicianJobStatusToApiString(status),
         if (serviceCharge != null) 'serviceCharge': serviceCharge,
+        if (collectionMethod != null) 'collectionMethod': collectionMethod,
+        if (amountInWords != null && amountInWords.isNotEmpty)
+          'amountInWords': amountInWords,
+        if (collectionScreenshotPath != null)
+          'collectionScreenshotPath': collectionScreenshotPath,
       };
       final response = await _apiClient.dio.put(
         '${ApiConstants.bookings}/$jobId/status',
@@ -57,6 +71,23 @@ class TechnicianRemoteDataSourceImpl implements TechnicianRemoteDataSource {
         'Job $jobId status -> ${body['status']}',
         tag: 'TechnicianRemoteDataSource',
       );
+    } on DioException catch (e) {
+      _apiClient.handleError(e);
+    }
+  }
+
+  @override
+  Future<String> uploadPaymentProof(String filePath) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath),
+      });
+      final response = await _apiClient.dio.post(
+        ApiConstants.uploadPayment,
+        data: formData,
+      );
+      final data = _apiClient.unwrapObject(response.data);
+      return data['path'] as String? ?? '';
     } on DioException catch (e) {
       _apiClient.handleError(e);
     }
