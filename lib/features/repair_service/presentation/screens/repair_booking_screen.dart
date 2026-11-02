@@ -489,6 +489,8 @@ import '../providers/repair_categories_provider.dart';
 import '../widgets/damage_photo_uploader.dart';
 import '../widgets/location_address_field.dart';
 import '../widgets/slot_picker.dart';
+import '../../../../core/utils/format_utils.dart';
+import '../../../service_catalog/presentation/widgets/service_image.dart';
 
 class RepairBookingScreen extends ConsumerStatefulWidget {
   const RepairBookingScreen({
@@ -496,10 +498,18 @@ class RepairBookingScreen extends ConsumerStatefulWidget {
     required this.categoryId,
     required this.categoryName,
     this.estimatedCharge,
+    this.imageUrl,
+    this.durationText,
+    this.oldPrice,
   });
 
   final String categoryId;
   final String categoryName;
+
+  // Shown in the summary card at the top (only for catalog services).
+  final String? imageUrl;
+  final String? durationText;
+  final double? oldPrice;
 
   /// Price of the service chosen from the catalog (null for built-in categories).
   final double? estimatedCharge;
@@ -736,6 +746,17 @@ class _RepairBookingScreenState extends ConsumerState<RepairBookingScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if ((widget.imageUrl ?? '').isNotEmpty ||
+                (widget.estimatedCharge ?? 0) > 0) ...[
+              _ServiceSummaryCard(
+                name: widget.categoryName,
+                imageUrl: widget.imageUrl,
+                price: widget.estimatedCharge,
+                oldPrice: widget.oldPrice,
+                durationText: widget.durationText,
+              ),
+              const SizedBox(height: 20),
+            ],
             _SectionLabel('Contact Details'),
             const SizedBox(height: 8),
             ContactDetailsFields(controller: _contact),
@@ -1008,6 +1029,101 @@ class _PaymentOption extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+/// What the customer is booking: picture, name, price (with the regular price
+/// struck out when discounted) and duration.
+class _ServiceSummaryCard extends StatelessWidget {
+  const _ServiceSummaryCard({
+    required this.name,
+    required this.imageUrl,
+    required this.price,
+    required this.oldPrice,
+    required this.durationText,
+  });
+
+  final String name;
+  final String? imageUrl;
+  final double? price;
+  final double? oldPrice;
+  final String? durationText;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hasPrice = (price ?? 0) > 0;
+    final hasDiscount = hasPrice && oldPrice != null && oldPrice! > price!;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.primary.withAlpha(60)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if ((imageUrl ?? '').isNotEmpty) ...[
+            ServiceImage(imageUrl: imageUrl!, width: 72, height: 72, radius: 10),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (hasPrice) ...[
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        FormatUtils.price(price!),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      if (hasDiscount)
+                        Text(
+                          FormatUtils.price(oldPrice!),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            decoration: TextDecoration.lineThrough,
+                            color: theme.hintColor,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+                if ((durationText ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule, size: 14, color: theme.hintColor),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(durationText!, style: theme.textTheme.bodySmall),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
