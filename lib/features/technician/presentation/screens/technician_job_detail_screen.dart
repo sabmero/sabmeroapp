@@ -7,6 +7,8 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_date_utils.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/widgets/activity_timeline.dart';
+import '../../../../core/widgets/collection_dialog.dart';
 import '../../data/datasources/technician_remote_datasource.dart';
 import '../../domain/entities/technician_job_entity.dart';
 import '../providers/technician_provider.dart';
@@ -101,145 +103,25 @@ class _TechnicianJobDetailScreenState
         );
     if (!mounted) return;
     setState(() => _updating = false);
+    ref.invalidate(activityTimelineProvider((kind: 'booking', id: job.id)));
     _showSnack(ok ? 'Job updated' : 'Failed to update job. Try again.');
   }
 
   /// Asks how much was collected and how: Cash (amount written in words) or
   /// Online (payment screenshot).
   Future<_Collection?> _promptForCollection(double? existing) async {
-    final amountCtrl = TextEditingController(
-      text: existing != null ? existing.toStringAsFixed(0) : '',
+    final r = await showCollectionDialog(
+      context,
+      initialAmount: existing,
+      confirmLabel: 'Mark Completed',
     );
-    final wordsCtrl = TextEditingController();
-    var method = 'Cash';
-    String? shotPath;
-    String? error;
-
-    final result = await showDialog<_Collection>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setLocal) => AlertDialog(
-          title: const Text('Payment collected'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Amount collected',
-                    prefixText: '${AppConstants.currencySymbol} ',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'Cash',
-                      label: Text('Cash'),
-                      icon: Icon(Icons.payments_outlined),
-                    ),
-                    ButtonSegment(
-                      value: 'Online',
-                      label: Text('Online'),
-                      icon: Icon(Icons.qr_code_2_rounded),
-                    ),
-                  ],
-                  selected: {method},
-                  onSelectionChanged: (v) => setLocal(() {
-                    method = v.first;
-                    error = null;
-                  }),
-                ),
-                const SizedBox(height: 16),
-                if (method == 'Cash')
-                  TextField(
-                    controller: wordsCtrl,
-                    maxLength: 200,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount in words',
-                      hintText: 'e.g. Five hundred rupees only',
-                    ),
-                  )
-                else
-                  OutlinedButton.icon(
-                    onPressed: () async {
-                      final picked = await ImagePicker().pickImage(
-                        source: ImageSource.gallery,
-                        imageQuality: 80,
-                      );
-                      if (picked != null) {
-                        setLocal(() {
-                          shotPath = picked.path;
-                          error = null;
-                        });
-                      }
-                    },
-                    icon: Icon(
-                      shotPath == null
-                          ? Icons.upload_file_rounded
-                          : Icons.check_circle_rounded,
-                    ),
-                    label: Text(
-                      shotPath == null
-                          ? 'Attach payment screenshot'
-                          : 'Screenshot attached',
-                    ),
-                  ),
-                if (error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final amount = double.tryParse(amountCtrl.text.trim());
-                if (amount == null || amount <= 0) {
-                  setLocal(() => error = 'Enter the amount collected.');
-                  return;
-                }
-                if (method == 'Cash' && wordsCtrl.text.trim().isEmpty) {
-                  setLocal(() => error = 'Write the amount in words.');
-                  return;
-                }
-                if (method == 'Online' && shotPath == null) {
-                  setLocal(() => error = 'Attach the payment screenshot.');
-                  return;
-                }
-                Navigator.pop(
-                  dialogContext,
-                  _Collection(
-                    amount: amount,
-                    method: method,
-                    amountInWords:
-                        method == 'Cash' ? wordsCtrl.text.trim() : null,
-                    screenshotLocalPath: method == 'Online' ? shotPath : null,
-                  ),
-                );
-              },
-              child: const Text('Mark Completed'),
-            ),
-          ],
-        ),
-      ),
+    if (r == null) return null;
+    return _Collection(
+      amount: r.amount,
+      method: r.method,
+      amountInWords: r.amountInWords,
+      screenshotLocalPath: r.screenshotLocalPath,
     );
-    amountCtrl.dispose();
-    wordsCtrl.dispose();
-    return result;
   }
 
   @override
@@ -361,6 +243,13 @@ class _TechnicianJobDetailScreenState
               ],
             ),
           ],
+          const SizedBox(height: 16),
+          ActivityTimelineCard(
+            kind: 'booking',
+            id: job.id,
+            title: 'Job history',
+            showStaff: false,
+          ),
           const SizedBox(height: 24),
           if (job.nextStatus != null)
             FilledButton.icon(
