@@ -6,6 +6,7 @@ import 'package:sabmeroapp/features/orders/domain/entities/order_entity.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../core/utils/app_date_utils.dart';
 import '../../../../core/utils/format_utils.dart';
+import '../../../../core/widgets/activity_timeline.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/skeleton_loaders.dart';
 import '../../../reviews/presentation/widgets/review_list.dart';
@@ -42,6 +43,8 @@ class OrderDetailScreen extends ConsumerWidget {
               title: 'Order Status',
               child: OrderStatusTimeline(currentStatus: order.status),
             ),
+            const SizedBox(height: 16),
+            ActivityTimelineCard(kind: 'order', id: order.id, title: 'Delivery updates'),
             const SizedBox(height: 16),
             _SectionCard(
               title: 'Items',
