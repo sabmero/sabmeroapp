@@ -31,11 +31,20 @@ class RiderDeliveriesNotifier extends AsyncNotifier<List<RiderDeliveryEntity>> {
     });
   }
 
-  Future<bool> markDelivered(String orderId) async {
+  Future<bool> markDelivered(
+    String orderId, {
+    String? collectionMethod,
+    String? amountInWords,
+    String? collectionScreenshotPath,
+  }) async {
     try {
-      await ref
-          .read(riderRemoteDataSourceProvider)
-          .updateDeliveryStatus(orderId, RiderDeliveryStatus.delivered);
+      await ref.read(riderRemoteDataSourceProvider).updateDeliveryStatus(
+            orderId,
+            RiderDeliveryStatus.delivered,
+            collectionMethod: collectionMethod,
+            amountInWords: amountInWords,
+            collectionScreenshotPath: collectionScreenshotPath,
+          );
       await refresh();
       return true;
     } catch (e, st) {
