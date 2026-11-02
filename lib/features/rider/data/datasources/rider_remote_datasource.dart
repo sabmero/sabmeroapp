@@ -15,7 +15,16 @@ String riderDeliveryStatusToApiString(RiderDeliveryStatus status) =>
 
 abstract class RiderRemoteDataSource {
   Future<List<RiderDeliveryModel>> getMyDeliveries();
-  Future<void> updateDeliveryStatus(String orderId, RiderDeliveryStatus status);
+  Future<void> updateDeliveryStatus(
+    String orderId,
+    RiderDeliveryStatus status, {
+    String? collectionMethod,
+    String? amountInWords,
+    String? collectionScreenshotPath,
+  });
+
+  /// Uploads an online-payment screenshot and returns its server path.
+  Future<String> uploadPaymentProof(String filePath);
 }
 
 class RiderRemoteDataSourceImpl implements RiderRemoteDataSource {
@@ -39,18 +48,45 @@ class RiderRemoteDataSourceImpl implements RiderRemoteDataSource {
   @override
   Future<void> updateDeliveryStatus(
     String orderId,
-    RiderDeliveryStatus status,
-  ) async {
+    RiderDeliveryStatus status, {
+    String? collectionMethod,
+    String? amountInWords,
+    String? collectionScreenshotPath,
+  }) async {
     try {
       final response = await _apiClient.dio.put(
         '${ApiConstants.orders}/$orderId/status',
-        data: {'status': riderDeliveryStatusToApiString(status)},
+        data: {
+          'status': riderDeliveryStatusToApiString(status),
+          if (collectionMethod != null) 'collectionMethod': collectionMethod,
+          if (amountInWords != null && amountInWords.isNotEmpty)
+            'amountInWords': amountInWords,
+          if (collectionScreenshotPath != null)
+            'collectionScreenshotPath': collectionScreenshotPath,
+        },
       );
       _apiClient.unwrapMessage(response.data);
       AppLogger.info(
         'Delivery $orderId status -> ${riderDeliveryStatusToApiString(status)}',
         tag: 'RiderRemoteDataSource',
       );
+    } on DioException catch (e) {
+      _apiClient.handleError(e);
+    }
+  }
+
+  @override
+  Future<String> uploadPaymentProof(String filePath) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath),
+      });
+      final response = await _apiClient.dio.post(
+        ApiConstants.uploadPayment,
+        data: formData,
+      );
+      final data = _apiClient.unwrapObject(response.data);
+      return data['path'] as String? ?? '';
     } on DioException catch (e) {
       _apiClient.handleError(e);
     }
