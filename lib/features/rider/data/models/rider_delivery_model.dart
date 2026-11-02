@@ -1,3 +1,4 @@
+import '../../../shop/data/models/category_model.dart' show resolveImageUrl;
 import '../../domain/entities/rider_delivery_entity.dart';
 
 class RiderDeliveryModel extends RiderDeliveryEntity {
@@ -26,6 +27,7 @@ class RiderDeliveryModel extends RiderDeliveryEntity {
             (e) => RiderDeliveryItemEntity(
               productName: (e as Map<String, dynamic>)['productName'] as String? ?? '',
               quantity: (e['quantity'] as num?)?.toInt() ?? 1,
+              imageUrl: resolveImageUrl(e['productImage'] as String?),
             ),
           )
           .toList(),
