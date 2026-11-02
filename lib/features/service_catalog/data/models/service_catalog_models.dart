@@ -119,6 +119,10 @@ class ServiceOffer {
     'categoryId': key,
     'categoryName': name,
     'estimatedCharge': price,
+    // shown in the summary card at the top of the booking form
+    'imageUrl': imageUrl,
+    'durationText': durationText,
+    'oldPrice': oldPrice,
   };
 
   factory ServiceOffer.fromService(Map<String, dynamic> j) => ServiceOffer(
