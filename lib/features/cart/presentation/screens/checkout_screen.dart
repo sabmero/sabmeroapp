@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -199,6 +200,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           const SizedBox(height: 8),
           ...cartState.items.map(
             (item) => _CheckoutItemRow(
+              imageUrl: item.productImage,
               name:
                   '${item.productName}'
                   '${item.variantLabel.isNotEmpty ? ' (${item.variantLabel})' : ''}',
@@ -305,12 +307,14 @@ class _SectionHeader extends StatelessWidget {
 
 class _CheckoutItemRow extends StatelessWidget {
   const _CheckoutItemRow({
+    required this.imageUrl,
     required this.name,
     required this.unitPrice,
     required this.quantity,
     required this.onChanged,
   });
 
+  final String imageUrl;
   final String name;
   final double unitPrice;
   final int quantity;
@@ -318,10 +322,40 @@ class _CheckoutItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor),
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // The product being ordered
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: CachedNetworkImage(
+              imageUrl: imageUrl,
+              width: 68,
+              height: 68,
+              fit: BoxFit.cover,
+              placeholder: (_, _) => Container(
+                width: 68,
+                height: 68,
+                color: theme.colorScheme.surfaceContainerHighest,
+              ),
+              errorWidget: (_, _, _) => Container(
+                width: 68,
+                height: 68,
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: const Icon(Icons.image_outlined, size: 30),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,43 +364,52 @@ class _CheckoutItemRow extends StatelessWidget {
                   name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                Text(
-                  FormatUtils.price(unitPrice * quantity),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.primary,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.outline),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.remove, size: 16),
-                  onPressed: quantity > 1
-                      ? () => onChanged(quantity - 1)
-                      : null,
-                ),
+                const SizedBox(height: 4),
                 Text(
-                  '$quantity',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  FormatUtils.price(unitPrice * quantity),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.add, size: 16),
-                  onPressed: quantity < 99
-                      ? () => onChanged(quantity + 1)
-                      : null,
+                if (quantity > 1)
+                  Text(
+                    '${FormatUtils.price(unitPrice)} each',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                const SizedBox(height: 6),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.colorScheme.outline),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.remove, size: 16),
+                        onPressed: quantity > 1
+                            ? () => onChanged(quantity - 1)
+                            : null,
+                      ),
+                      Text(
+                        '$quantity',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.add, size: 16),
+                        onPressed: quantity < 99
+                            ? () => onChanged(quantity + 1)
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
