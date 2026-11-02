@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String serverOrigin = 'http://165.22.247.79:8080';
+  static const String serverOrigin = 'https://api.sabmero.com';
   static const String baseUrl = '$serverOrigin/api';
 
   // Auth
