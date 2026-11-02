@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../data/datasources/rider_remote_datasource.dart';
 import '../../domain/entities/rider_delivery_entity.dart';
 import '../providers/rider_provider.dart';
 
@@ -48,34 +50,187 @@ class _RiderDeliveryDetailScreenState
       );
 
   Future<void> _markDelivered(RiderDeliveryEntity d) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Mark as delivered?'),
-        content: Text(
-          d.isCashOnDelivery
-              ? 'Confirm you have collected ${AppConstants.currencySymbol} ${d.totalAmount.toStringAsFixed(0)} from the customer.'
-              : 'This will mark order #${d.id} as delivered.',
+    _Collection? collection;
+    if (d.isCashOnDelivery) {
+      // Cash on delivery: how was the money collected?
+      collection = await _promptForCollection(d);
+      if (collection == null) return; // cancelled
+    } else {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Mark as delivered?'),
+          content: Text('This will mark order #${d.id} as delivered.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Confirm'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
+      );
+      if (confirmed != true) return;
+    }
 
     setState(() => _updating = true);
-    final ok = await ref.read(riderDeliveriesProvider.notifier).markDelivered(d.id);
+
+    // Online payment: upload the screenshot first.
+    String? proofPath;
+    if (collection != null &&
+        collection.method == 'Online' &&
+        collection.screenshotLocalPath != null) {
+      try {
+        proofPath = await ref
+            .read(riderRemoteDataSourceProvider)
+            .uploadPaymentProof(collection.screenshotLocalPath!);
+      } catch (e, st) {
+        AppLogger.error('Proof upload failed',
+            tag: 'RiderDeliveryDetail', error: e, stackTrace: st);
+      }
+      if (proofPath == null || proofPath.isEmpty) {
+        if (!mounted) return;
+        setState(() => _updating = false);
+        _showSnack('Could not upload the screenshot. Try again.');
+        return;
+      }
+    }
+
+    final ok = await ref.read(riderDeliveriesProvider.notifier).markDelivered(
+          d.id,
+          collectionMethod: collection?.method,
+          amountInWords: collection?.amountInWords,
+          collectionScreenshotPath: proofPath,
+        );
     if (!mounted) return;
     setState(() => _updating = false);
     _showSnack(ok ? 'Delivery updated' : 'Failed to update. Try again.');
+  }
+
+  /// Cash-on-delivery hand-over: Cash (amount written in words) or Online
+  /// (screenshot of the customer's payment).
+  Future<_Collection?> _promptForCollection(RiderDeliveryEntity d) async {
+    final wordsCtrl = TextEditingController();
+    var method = 'Cash';
+    String? shotPath;
+    String? error;
+
+    final result = await showDialog<_Collection>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setLocal) => AlertDialog(
+          title: const Text('Payment collected'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Collect ${AppConstants.currencySymbol} ${d.totalAmount.toStringAsFixed(0)} from the customer.',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 16),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'Cash',
+                      label: Text('Cash'),
+                      icon: Icon(Icons.payments_outlined),
+                    ),
+                    ButtonSegment(
+                      value: 'Online',
+                      label: Text('Online'),
+                      icon: Icon(Icons.qr_code_2_rounded),
+                    ),
+                  ],
+                  selected: {method},
+                  onSelectionChanged: (v) => setLocal(() {
+                    method = v.first;
+                    error = null;
+                  }),
+                ),
+                const SizedBox(height: 16),
+                if (method == 'Cash')
+                  TextField(
+                    controller: wordsCtrl,
+                    maxLength: 200,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount received in words',
+                      hintText: 'e.g. Five thousand rupees only',
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final picked = await ImagePicker().pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 80,
+                      );
+                      if (picked != null) {
+                        setLocal(() {
+                          shotPath = picked.path;
+                          error = null;
+                        });
+                      }
+                    },
+                    icon: Icon(
+                      shotPath == null
+                          ? Icons.upload_file_rounded
+                          : Icons.check_circle_rounded,
+                    ),
+                    label: Text(
+                      shotPath == null
+                          ? 'Attach payment screenshot'
+                          : 'Screenshot attached',
+                    ),
+                  ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    error!,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (method == 'Cash' && wordsCtrl.text.trim().isEmpty) {
+                  setLocal(() => error = 'Write the amount in words.');
+                  return;
+                }
+                if (method == 'Online' && shotPath == null) {
+                  setLocal(() => error = 'Attach the payment screenshot.');
+                  return;
+                }
+                Navigator.pop(
+                  dialogContext,
+                  _Collection(
+                    method: method,
+                    amountInWords:
+                        method == 'Cash' ? wordsCtrl.text.trim() : null,
+                    screenshotLocalPath: method == 'Online' ? shotPath : null,
+                  ),
+                );
+              },
+              child: const Text('Mark Delivered'),
+            ),
+          ],
+        ),
+      ),
+    );
+    wordsCtrl.dispose();
+    return result;
   }
 
   @override
@@ -251,4 +406,16 @@ class _InfoRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Collection {
+  const _Collection({
+    required this.method,
+    this.amountInWords,
+    this.screenshotLocalPath,
+  });
+
+  final String method; // 'Cash' | 'Online'
+  final String? amountInWords;
+  final String? screenshotLocalPath;
 }
