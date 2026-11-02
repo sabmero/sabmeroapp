@@ -132,8 +132,12 @@ class RepairRemoteDataSourceImpl implements RepairRemoteDataSource {
         'serviceAddress': address,
         // Links the booking to the catalog entry picked in the app.
         ..._catalogLinkFields(categoryId),
-        if (damagePhotoUrls.isNotEmpty)
+        if (problemDescription != null && problemDescription.trim().isNotEmpty)
+          'description': problemDescription.trim(),
+        if (damagePhotoUrls.isNotEmpty) ...{
           'damageImagePath': damagePhotoUrls.first,
+          'damageImagePaths': damagePhotoUrls,
+        },
         // Backend accepts "Cash" | "QR".
         'paymentMethod': paymentMethod,
         // Required by the backend when paymentMethod == "QR".
