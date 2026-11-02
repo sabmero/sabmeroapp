@@ -189,6 +189,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             categoryId: args['categoryId'] as String? ?? '',
             categoryName: args['categoryName'] as String? ?? '',
             estimatedCharge: (args['estimatedCharge'] as num?)?.toDouble(),
+            imageUrl: args['imageUrl'] as String?,
+            durationText: args['durationText'] as String?,
+            oldPrice: (args['oldPrice'] as num?)?.toDouble(),
           );
         },
       ),
