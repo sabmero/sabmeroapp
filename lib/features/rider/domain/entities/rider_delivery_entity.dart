@@ -16,10 +16,12 @@ RiderDeliveryStatus riderDeliveryStatusFromString(String? value) {
 class RiderDeliveryItemEntity {
   final String productName;
   final int quantity;
+  final String imageUrl;
 
   const RiderDeliveryItemEntity({
     required this.productName,
     required this.quantity,
+    this.imageUrl = '',
   });
 }
 
