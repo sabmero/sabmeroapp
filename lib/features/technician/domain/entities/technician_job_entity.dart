@@ -37,6 +37,8 @@ class TechnicianJobEntity {
   final double longitude;
   final String serviceAddress;
   final String? damageImagePath;
+  final String? description;
+  final List<String> images;
   final TechnicianJobStatus status;
   final String paymentMethod;
   final String paymentStatus;
@@ -54,6 +56,8 @@ class TechnicianJobEntity {
     required this.longitude,
     required this.serviceAddress,
     this.damageImagePath,
+    this.description,
+    this.images = const [],
     required this.status,
     required this.paymentMethod,
     required this.paymentStatus,
