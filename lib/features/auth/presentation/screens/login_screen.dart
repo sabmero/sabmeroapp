@@ -163,18 +163,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Center(
-                  child: TextButton(
-                    onPressed: () => context.push(
-                      RouteNames.otpVerification,
-                      extra: Validators.normalizePhone(
-                        _phoneController.text.trim(),
-                      ),
-                    ),
-                    child: const Text('Login with OTP instead'),
-                  ),
-                ),
               ],
             ),
           ),
