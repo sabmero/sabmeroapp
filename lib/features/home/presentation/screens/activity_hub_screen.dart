@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../orders/presentation/screens/order_list_screen.dart';
 import '../../../repair_service/presentation/screens/repair_bookings_list_screen.dart';
 
@@ -44,12 +45,12 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen>
           controller: _tabController,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          indicatorColor: AppColors.accent,
           indicatorWeight: 3,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700),
           tabs: const [
             Tab(icon: Icon(Icons.shopping_bag_outlined), text: 'Orders'),
-            Tab(icon: Icon(Icons.handyman_outlined), text: 'Repairs'),
+            Tab(icon: Icon(Icons.handyman_outlined), text: 'Bookings'),
           ],
         ),
       ),
@@ -76,7 +77,7 @@ class _ActivityHubScreenState extends ConsumerState<ActivityHubScreen>
               ? Icons.add_shopping_cart_rounded
               : Icons.add_rounded,
         ),
-        label: Text(_tabController.index == 0 ? 'Shop' : 'Book Repair'),
+        label: Text(_tabController.index == 0 ? 'Shop' : 'Book Service'),
       ),
     );
   }
