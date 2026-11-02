@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_date_utils.dart';
+import '../../../../core/widgets/activity_timeline.dart';
 import '../../../../core/widgets/app_error_widget.dart';
 import '../../../../core/widgets/skeleton_loaders.dart';
 import '../../../reviews/presentation/widgets/review_list.dart';
@@ -113,6 +114,8 @@ class RepairTrackingScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               StatusStepIndicator(currentStatus: booking.status),
+              const SizedBox(height: 20),
+              ActivityTimelineCard(kind: 'booking', id: booking.id, title: 'Service updates'),
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(14),
