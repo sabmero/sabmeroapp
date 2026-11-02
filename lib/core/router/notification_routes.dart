@@ -32,7 +32,7 @@ String? notificationLocation({
 
     // Rider: a delivery was assigned to me.
     case 'order_assigned':
-      return hasId ? withId(RouteNames.riderJobDetail) : RouteNames.riderJobs;
+      return hasId ? withId(RouteNames.riderJobDetail) : RouteNames.home;
 
     // Customer: repair / installation booking status.
     case 'booking':
@@ -44,13 +44,12 @@ String? notificationLocation({
     case 'booking_assigned':
       return hasId
           ? withId(RouteNames.technicianJobDetail)
-          : RouteNames.technicianJobs;
+          : RouteNames.home;
 
     // Technician: the admin paid me.
     case 'technicianpayment':
-      return role == UserRole.deliveryRider
-          ? RouteNames.riderJobs
-          : RouteNames.technicianJobs;
+      // The jobs list is the staff member's home screen.
+      return RouteNames.home;
 
     // Payment on an order verified / rejected.
     case 'payment':
