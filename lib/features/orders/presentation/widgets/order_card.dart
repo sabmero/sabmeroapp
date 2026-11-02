@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_date_utils.dart';
@@ -83,10 +84,60 @@ class OrderCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            // What was ordered: up to three photos and a "+N" for the rest
+            Row(
+              children: [
+                for (final item in order.items.take(3))
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CachedNetworkImage(
+                        imageUrl: item.productImage,
+                        width: 52,
+                        height: 52,
+                        fit: BoxFit.cover,
+                        placeholder: (_, _) => Container(
+                          width: 52,
+                          height: 52,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                        ),
+                        errorWidget: (_, _, _) => Container(
+                          width: 52,
+                          height: 52,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          child: const Icon(Icons.image_outlined, size: 24),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (order.items.length > 3)
+                  Container(
+                    width: 52,
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '+${order.items.length - 3}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
             Text(
               order.items.map((i) => i.productName).join(', '),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
