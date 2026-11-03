@@ -161,9 +161,13 @@ class RepairBookingsListScreen extends ConsumerWidget {
                           children: [
                             const Icon(Icons.event_rounded, size: 16),
                             const SizedBox(width: 6),
-                            Text(
-                              '${AppDateUtils.formatDate(booking.scheduledDate)} • ${booking.timeSlot}',
-                              style: Theme.of(context).textTheme.bodySmall,
+                            Expanded(
+                              child: Text(
+                                '${AppDateUtils.formatDate(booking.scheduledDate)} • ${booking.timeSlot}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
                             ),
                           ],
                         ),
