@@ -26,6 +26,7 @@ class TechnicianJobDetailScreen extends ConsumerStatefulWidget {
 class _TechnicianJobDetailScreenState
     extends ConsumerState<TechnicianJobDetailScreen> {
   bool _updating = false;
+  bool _refetched = false; // reload the list once if the job isn't in it yet
 
   Future<void> _launch(Uri uri) async {
     try {
@@ -129,9 +130,42 @@ class _TechnicianJobDetailScreenState
     final job = ref.watch(technicianJobByIdProvider(widget.jobId));
 
     if (job == null) {
+      // Opened from a notification: the list may not be loaded yet, or may
+      // have been loaded before this job was assigned. Load it (once) before
+      // giving up.
+      final jobsAsync = ref.watch(technicianJobsProvider);
+      if (jobsAsync.isLoading) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Job Details')),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (!_refetched) {
+        _refetched = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ref.read(technicianJobsProvider.notifier).refresh();
+        });
+        return Scaffold(
+          appBar: AppBar(title: const Text('Job Details')),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      }
       return Scaffold(
         appBar: AppBar(title: const Text('Job Details')),
-        body: const Center(child: Text('Job not found')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Job not found'),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () =>
+                    ref.read(technicianJobsProvider.notifier).refresh(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
