@@ -25,6 +25,7 @@ class RiderDeliveryDetailScreen extends ConsumerStatefulWidget {
 class _RiderDeliveryDetailScreenState
     extends ConsumerState<RiderDeliveryDetailScreen> {
   bool _updating = false;
+  bool _refetched = false; // reload the list once if the order isn't in it yet
 
   Future<void> _launch(Uri uri) async {
     try {
@@ -135,9 +136,40 @@ class _RiderDeliveryDetailScreenState
     final d = ref.watch(riderDeliveryByIdProvider(widget.orderId));
 
     if (d == null) {
+      // Opened from a notification: load the list (once) before giving up.
+      final listAsync = ref.watch(riderDeliveriesProvider);
+      if (listAsync.isLoading) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Delivery Details')),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (!_refetched) {
+        _refetched = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ref.read(riderDeliveriesProvider.notifier).refresh();
+        });
+        return Scaffold(
+          appBar: AppBar(title: const Text('Delivery Details')),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      }
       return Scaffold(
         appBar: AppBar(title: const Text('Delivery Details')),
-        body: const Center(child: Text('Delivery not found')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Delivery not found'),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () =>
+                    ref.read(riderDeliveriesProvider.notifier).refresh(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
