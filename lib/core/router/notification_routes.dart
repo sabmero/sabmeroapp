@@ -47,8 +47,6 @@ String? notificationLocation({
           : RouteNames.home;
 
     // Technician: the admin paid me.
-    case 'remittance_verified':
-    case 'remittance_rejected':
     case 'technicianpayment':
       // The jobs list is the staff member's home screen.
       return RouteNames.home;
