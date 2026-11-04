@@ -223,7 +223,7 @@ class _TechnicianJobDetailScreenState
                 _InfoRow(
                   icon: Icons.payments_outlined,
                   label:
-                      '${AppConstants.currencySymbol} ${job.serviceCharge!.toStringAsFixed(0)}',
+                      'Collect from customer: ${AppConstants.currencySymbol} ${job.serviceCharge!.toStringAsFixed(0)}',
                 ),
             ],
           ),
