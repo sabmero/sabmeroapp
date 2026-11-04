@@ -126,6 +126,28 @@ String _money(double v) => '${AppConstants.currencySymbol} ${v.toStringAsFixed(0
 class StaffSummaryScreen extends ConsumerWidget {
   const StaffSummaryScreen({super.key});
 
+  Future<void> _pickMyQr(BuildContext context, WidgetRef ref) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked == null) return;
+    try {
+      final api = ref.read(apiClientProvider);
+      final form = FormData.fromMap({'file': await MultipartFile.fromFile(picked.path)});
+      final up = await api.dio.post(ApiConstants.uploadPayment, data: form);
+      final path = api.unwrapObject(up.data)['path'] as String?;
+      final res = await api.dio.put('/staff-remittances/my-qr', data: {'qrImagePath': path});
+      api.unwrapObject(res.data);
+      ref.invalidate(staffSummaryProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('QR saved')));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Could not save the QR. Try again.')));
+      }
+    }
+  }
+
   Future<void> _confirm(BuildContext context, WidgetRef ref, StaffPayment p) async {
     try {
       final api = ref.read(apiClientProvider);
@@ -253,14 +275,29 @@ class StaffSummaryScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                    if (s.myQrPath != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(
-                          'Your payout QR is set by SabMero.',
-                          style: Theme.of(context).textTheme.bodySmall,
+                    const Divider(height: 28),
+                    Text('My payout QR (SabMero pays you here)',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    if (s.myQrPath != null && s.myQrPath!.isNotEmpty)
+                      Center(
+                        child: Image.network(
+                          resolveImageUrl(s.myQrPath),
+                          height: 180,
+                          errorBuilder: (_, __, ___) => const Text('QR image could not be loaded.'),
                         ),
+                      )
+                    else
+                      const Text('No QR added yet.'),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _pickMyQr(context, ref),
+                        icon: const Icon(Icons.qr_code_2),
+                        label: Text(s.myQrPath == null ? 'Add my QR' : 'Change my QR'),
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
