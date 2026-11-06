@@ -33,18 +33,28 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -e
-          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
             echo "A signing secret is missing - stopping so the AAB is not signed with the debug key"
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+          # remove stray spaces / new lines that get added when pasting on a phone
+          STORE_PASS=$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')
+          ALIAS=$(printf '%s' "$KEY_ALIAS" | tr -d ' \r\n')
+          printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n' | base64 -d > android/app/upload-keystore.jks
+          echo "Checking keystore with the saved password and alias..."
+          if ! keytool -list -keystore android/app/upload-keystore.jks -storepass "$STORE_PASS" -alias "$ALIAS" > /dev/null 2>&1; then
+            echo "ERROR: keystore, KEYSTORE_PASSWORD or KEY_ALIAS secret is wrong. Re-create these secrets."
+            keytool -list -keystore android/app/upload-keystore.jks -storepass "$STORE_PASS" 2>&1 | head -5 || true
+            exit 1
+          fi
+          echo "Keystore OK"
+          # PKCS12 keystores use the store password for the key as well
           {
-            echo "storePassword=$KEYSTORE_PASSWORD"
-            echo "keyPassword=$KEY_PASSWORD"
-            echo "keyAlias=$KEY_ALIAS"
+            echo "storePassword=$STORE_PASS"
+            echo "keyPassword=$STORE_PASS"
+            echo "keyAlias=$ALIAS"
             echo "storeFile=upload-keystore.jks"
           } > android/key.properties
 
